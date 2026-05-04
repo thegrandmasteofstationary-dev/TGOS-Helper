@@ -25,7 +25,7 @@
                 <p id="namaBarangPreview" class="text-sm text-green-600 font-bold mt-2 h-5"></p>
             </div>
 
-            <div class="grid grid-cols-3 gap-4 items-end mb-4">
+            <div class="grid grid-cols-4 gap-4 items-start mb-4">
                 <div>
                     <label class="block text-sm font-semibold mb-1">2. Qty</label>
                     <input type="number" id="qtyInput" class="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500" value="1" min="1" disabled>
@@ -35,6 +35,273 @@
                     <select id="unitInput" class="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500" disabled>
                         <option value="pcs">Pcs</option>
                         <option value="lusin">Lusin</option>
+                        <option value="pak">Pak</option>
+                    </select>
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-sm font-semibold mb-1">4. Harga (Bisa Diubah Manual)</label>
+                    <div class="flex flex-col gap-2">
+                        <select id="hargaSelect" class="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 bg-gray-100 text-sm" disabled>
+                            <option value="">Scan barang dulu...</option>
+                        </select>
+                        <input type="number" id="customHargaInput" class="w-full border-2 border-green-400 rounded p-2 focus:ring-2 focus:ring-green-500 font-bold" placeholder="Ketik harga custom..." disabled>
+                    </div>
+                </div>
+            </div>
+
+            <button id="btnTambah" class="bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 w-full font-bold disabled:bg-gray-400 mt-2" disabled>
+                Tambahkan ke Struk (Enter)
+            </button>
+        </div>
+
+        <!-- Area Struk -->
+        <div class="bg-white p-8 rounded-lg shadow-md print-area" id="strukArea">
+            <div class="mb-6">
+                <p><strong>Tanggal:</strong> <span id="displayTanggal"></span></p>
+                <div class="flex items-center gap-2 mt-2">
+                    <strong>Tuan Toko:</strong> 
+                    <input type="text" id="inputTuanToko" class="border-b focus:outline-none print:hidden w-64" placeholder="Ketik nama pelanggan...">
+                    <span id="printTuanToko" class="hidden print:inline-block border-b border-black w-64 min-h-[1.5rem]"></span>
+                </div>
+                <!-- Tambahan Kolom Catatan -->
+                <div class="flex items-center gap-2 mt-2">
+                    <strong>Catatan&nbsp;&nbsp;&nbsp;&nbsp;:</strong> 
+                    <input type="text" id="inputCatatan" class="border-b focus:outline-none print:hidden w-80 text-sm" placeholder="Tambahkan catatan (opsional)...">
+                    <span id="printCatatan" class="hidden print:inline-block border-b border-black w-80 min-h-[1.5rem] text-sm"></span>
+                </div>
+            </div>
+
+            <table class="w-full text-left mb-6 border-collapse">
+                <thead>
+                    <tr class="border-b-2 border-gray-400 text-sm">
+                        <th class="py-2 w-[15%]">Banyaknya</th>
+                        <th class="py-2 w-[40%]">Nama Barang</th>
+                        <th class="py-2 w-[20%]">Harga</th>
+                        <th class="py-2 w-[15%]">Jumlah</th>
+                        <th class="py-2 w-[10%] text-center print:hidden">Hapus</th>
+                    </tr>
+                </thead>
+                <tbody id="listBarang">
+                    <!-- Data barang masuk sini -->
+                </tbody>
+            </table>
+
+            <div class="border-t-2 border-gray-400 pt-4 flex flex-col items-end">
+                <h3 class="text-xl font-bold mb-4">Total: Rp <span id="totalAkhir">0</span></h3>
+                <p class="text-lg font-semibold italic">Toko Faster</p>
+            </div>
+        </div>
+
+        <!-- Tombol Print -->
+        <div class="mt-6 flex justify-end print:hidden">
+            <button onclick="window.print()" class="bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 shadow-lg flex items-center gap-2">
+                🖨️ Cetak Struk / PDF
+            </button>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('displayTanggal').innerText = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+        document.getElementById('inputTuanToko').addEventListener('input', function() {
+            document.getElementById('printTuanToko').innerText = this.value;
+        });
+        
+        // Sinkronisasi Catatan
+        document.getElementById('inputCatatan').addEventListener('input', function() {
+            document.getElementById('printCatatan').innerText = this.value;
+        });
+
+        let database = {};
+        let currentBarang = null; 
+        let totalTransaksi = 0;
+
+        async function fetchDatabase() {
+            const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQqFjmQEMLJl-UhiBkV6hDmVePKMGhWgUkwqPWiUOcv6YeBjX9-mw75au_WztJIkcbwr0D2hcDAGZrw/pub?gid=1746227063&single=true&output=csv';
+            
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("Gagal mengambil data");
+                const csvText = await response.text();
+                const rows = csvText.split('\n');
+                
+                for (let i = 1; i < rows.length; i++) {
+                    const cols = rows[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    
+                    if (cols.length >= 8) { 
+                        let nama = cols[1].replace(/['"]+/g, '').trim();
+                        let kodeJamak = cols[2].replace(/['"]+/g, '').trim();
+                        let kodeTunggal = cols[3].replace(/['"]+/g, '').trim();
+                        
+                        let hargaG1 = parseInt(cols[4].replace(/['"\.]+/g, '').trim()) || 0;
+                        let hargaG2 = parseInt(cols[5].replace(/['"\.]+/g, '').trim()) || 0;
+                        let hargaE1 = parseInt(cols[6].replace(/['"\.]+/g, '').trim()) || 0;
+                        let hargaE2 = parseInt(cols[7].replace(/['"\.]+/g, '').trim()) || 0;
+                        
+                        let baseData = { nama, g1: hargaG1, g2: hargaG2, e1: hargaE1, e2: hargaE2 };
+
+                        if (kodeJamak !== "") database[kodeJamak] = { ...baseData, tipe: 'jamak' };
+                        if (kodeTunggal !== "") database[kodeTunggal] = { ...baseData, tipe: 'tunggal' };
+                    }
+                }
+                
+                let inputScanner = document.getElementById('barcodeInput');
+                inputScanner.disabled = false;
+                inputScanner.placeholder = "Siap! Scan barcode di sini...";
+                inputScanner.focus();
+                
+            } catch (error) {
+                console.error("Error Detail:", error);
+                alert("Gagal memuat database!");
+            }
+        }
+
+        window.onload = fetchDatabase;
+
+        // 1. Logika saat Barcode discan
+        document.getElementById('barcodeInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault(); 
+                let barcode = this.value.trim();
+                if (barcode === "") return;
+
+                if (database[barcode]) {
+                    currentBarang = database[barcode];
+                    
+                    document.getElementById('namaBarangPreview').innerText = "Terdeteksi: " + currentBarang.nama;
+                    
+                    document.getElementById('qtyInput').disabled = false;
+                    document.getElementById('unitInput').disabled = false;
+                    
+                    let hargaSelect = document.getElementById('hargaSelect');
+                    let customHargaInput = document.getElementById('customHargaInput');
+                    
+                    hargaSelect.disabled = false;
+                    hargaSelect.classList.remove('bg-gray-100');
+                    customHargaInput.disabled = false;
+                    document.getElementById('btnTambah').disabled = false;
+
+                    // Setup Dropdown sesuai tipe
+                    if (currentBarang.tipe === 'tunggal') {
+                        hargaSelect.innerHTML = `
+                            <option value="${currentBarang.e2}">Eceran 2 (Rp ${currentBarang.e2.toLocaleString('id-ID')})</option>
+                            <option value="${currentBarang.e1}">Eceran 1 (Rp ${currentBarang.e1.toLocaleString('id-ID')})</option>
+                        `;
+                    } else if (currentBarang.tipe === 'jamak') {
+                        hargaSelect.innerHTML = `
+                            <option value="${currentBarang.g2}">Grosir 2 (Rp ${currentBarang.g2.toLocaleString('id-ID')})</option>
+                            <option value="${currentBarang.g1}">Grosir 1 (Rp ${currentBarang.g1.toLocaleString('id-ID')})</option>
+                        `;
+                    }
+
+                    // Set nilai default custom harga dari dropdown
+                    customHargaInput.value = hargaSelect.value;
+
+                    // Jika dropdown berubah, update custom harga
+                    hargaSelect.onchange = function() {
+                        customHargaInput.value = this.value;
+                    };
+
+                    document.getElementById('qtyInput').focus();
+                    document.getElementById('qtyInput').select();
+
+                } else {
+                    alert("Barcode tidak ditemukan: " + barcode);
+                    this.value = '';
+                }
+            }
+        });
+
+        // 2. Tombol Enter di form Qty/Satuan/Harga akan memicu Tambah
+        ['qtyInput', 'unitInput', 'hargaSelect', 'customHargaInput'].forEach(id => {
+            document.getElementById(id).addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    tambahkanKeList();
+                }
+            });
+        });
+
+        document.getElementById('btnTambah').addEventListener('click', tambahkanKeList);
+
+        // 3. Masukkan ke List
+        function tambahkanKeList() {
+            if (!currentBarang) return;
+
+            let qty = parseInt(document.getElementById('qtyInput').value) || 1;
+            let unit = document.getElementById('unitInput').value;
+            
+            // Ambil harga dari input manual (final decision ada di sini)
+            let hargaSatuan = parseInt(document.getElementById('customHargaInput').value) || 0;
+            
+            // Cek apakah user mengubah harga secara manual di luar opsi dropdown
+            let hargaDropdown = parseInt(document.getElementById('hargaSelect').value);
+            let teksHarga = document.getElementById('hargaSelect').options[document.getElementById('hargaSelect').selectedIndex].text;
+            
+            if (hargaSatuan !== hargaDropdown) {
+                teksHarga = "Harga Custom";
+            }
+
+            // Perhitungan fix, tidak pakai multiplier
+            let subtotal = hargaSatuan * qty;
+
+            totalTransaksi += subtotal;
+
+            let tbody = document.getElementById('listBarang');
+            let tr = document.createElement('tr');
+            tr.className = "border-b border-gray-200 baris-barang";
+            tr.dataset.subtotal = subtotal; 
+
+            tr.innerHTML = `
+                <td class="py-2 text-sm">${qty} ${unit}</td>
+                <td class="py-2 text-sm">${currentBarang.nama}</td>
+                <td class="py-2 text-sm">${hargaSatuan.toLocaleString('id-ID')} <br><span class="text-xs text-gray-500">${teksHarga}</span></td>
+                <td class="py-2 text-sm font-medium">Rp ${subtotal.toLocaleString('id-ID')}</td>
+                <td class="py-2 text-center print:hidden">
+                    <button onclick="hapusBaris(this)" class="text-red-500 hover:text-red-700 font-bold">✕</button>
+                </td>
+            `;
+
+            tbody.appendChild(tr);
+            updateTotal();
+
+            // 4. Reset Area
+            currentBarang = null;
+            document.getElementById('barcodeInput').value = '';
+            document.getElementById('namaBarangPreview').innerText = '';
+            document.getElementById('qtyInput').value = '1';
+            document.getElementById('qtyInput').disabled = true;
+            document.getElementById('unitInput').value = 'pcs';
+            document.getElementById('unitInput').disabled = true;
+            
+            let hargaSelect = document.getElementById('hargaSelect');
+            hargaSelect.innerHTML = '<option value="">Scan barang dulu...</option>';
+            hargaSelect.disabled = true;
+            hargaSelect.classList.add('bg-gray-100');
+            
+            let customHargaInput = document.getElementById('customHargaInput');
+            customHargaInput.value = '';
+            customHargaInput.disabled = true;
+            
+            document.getElementById('btnTambah').disabled = true;
+            document.getElementById('barcodeInput').focus();
+        }
+
+        // 5. Fitur Hapus
+        function hapusBaris(btn) {
+            let tr = btn.closest('tr');
+            let subtotal = parseInt(tr.dataset.subtotal);
+            totalTransaksi -= subtotal;
+            tr.remove();
+            updateTotal();
+        }
+
+        function updateTotal() {
+            document.getElementById('totalAkhir').innerText = totalTransaksi.toLocaleString('id-ID');
+        }
+    </script>
+</body>
+</html>                        <option value="lusin">Lusin</option>
                         <option value="pak">Pak</option>
                     </select>
                 </div>
