@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Receipt POS</title>
+    <!-- Menggunakan Tailwind via CDN untuk styling cepat -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Sembunyikan elemen input saat di-print (PDF/Kertas) */
+        @media print {
+            .no-print { display: none !important; }
+            body { padding: 0; margin: 0; background-color: white; }
+            .print-area { width: 100%; border: none; box-shadow: none; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-8 flex justify-center text-gray-800">
+
+    <div class="max-w-3xl w-full">
+        <!-- Area Input (Disembunyikan saat print) -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6 no-print">
+            <h2 class="text-xl font-bold mb-4">Kasir / POS Scanner</h2>
+            <div class="grid grid-cols-4 gap-4 items-end">
+                <div class="col-span-2">
+                    <label class="block text-sm mb-1">Scan Barcode / ID Barang</label>
+                    <!-- Scanner akan otomatis mengisi dan menekan Enter di sini -->
+                    <input type="text" id="barcodeInput" class="w-full border rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Scan di sini..." autofocus>
+                </div>
+                <div>
+                    <label class="block text-sm mb-1">Qty</label>
+                    <input type="number" id="qtyInput" class="w-full border rounded p-2" value="1" min="1">
+                </div>
+                <div>
+                    <label class="block text-sm mb-1">Satuan</label>
+                    <select id="unitInput" class="w-full border rounded p-2">
+                        <option value="pcs">Pcs</option>
+                        <option value="lusin">Lusin</option>
+                        <option value="pak">Pak</option>
+                    </select>
+                </div>
+            </div>
+            <button onclick="tambahBarangManual()" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">Tambah ke Keranjang (Enter)</button>
+        </div>
+
+        <!-- Area Struk (Tampil saat print) -->
+        <div class="bg-white p-8 rounded-lg shadow-md print-area" id="strukArea">
+            <div class="mb-6">
+                <p><strong>Tanggal:</strong> <span id="displayTanggal"></span></p>
+                <p class="flex items-center gap-2"><strong>Tuan Toko:</strong> <input type="text" class="border-b focus:outline-none no-print w-64" placeholder="Nama Pelanggan..."><span class="hidden print:inline-block border-b border-black w-64"></span></p>
+            </div>
+
+            <table class="w-full text-left mb-6 border-collapse">
+                <thead>
+                    <tr class="border-b-2 border-gray-400">
+                        <th class="py-2 w-1/4">Banyaknya</th>
+                        <th class="py-2 w-2/4">Nama Barang</th>
+                        <th class="py-2 w-1/4">Harga</th>
+                        <th class="py-2 w-1/4">Jumlah</th>
+                    </tr>
+                </thead>
+                <tbody id="listBarang">
+                    <!-- Data barang masuk sini -->
+                </tbody>
+            </table>
+
+            <div class="border-t-2 border-gray-400 pt-4 flex flex-col items-end">
+                <h3 class="text-xl font-bold mb-4">Jumlah: Rp. <span id="totalAkhir">0</span></h3>
+                <p class="text-lg font-semibold italic">Toko Faster</p>
+            </div>
+        </div>
+
+        <!-- Tombol Print -->
+        <div class="mt-6 flex justify-end no-print">
+            <button onclick="window.print()" class="bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 shadow-lg flex items-center gap-2">
+                🖨️ Cetak Struk / PDF
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Set Tanggal Hari Ini
+        document.getElementById('displayTanggal').innerText = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+        let database = {}; 
+        let totalTransaksi = 0;
+
+        async function fetchDatabase() {
+            // URL CSV dari Google Sheets (Gid 1746227063 menunjuk ke tab "Faster")
+            const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQqFjmQEMLJl-UhiBkV6hDmVePKMGhWgUkwqPWiUOcv6YeBjX9-mw75au_WztJIkcbwr0D2hcDAGZrw/pub?gid=1746227063&single=true&output=csv';
+            
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("Gagal mengambil data dari internet.");
+                const csvText = await response.text();
+                
+                // Memecah data berdasarkan baris (enter)
+                const rows = csvText.split('\n');
+                
+                // Looping mulai dari baris 2 (index 1) untuk melewati Header
+                for (let i = 1; i < rows.length; i++) {
+                    // Regex ini memecah koma CSV dengan aman (mengabaikan koma di dalam tanda kutip)
+                    const cols = rows[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    
+                    if (cols.length >= 8) { 
+                        let nama = cols[1].replace(/['"]+/g, '').trim();
+                        let kodeJamak = cols[2].replace(/['"]+/g, '').trim();
+                        let kodeTunggal = cols[3].replace(/['"]+/g, '').trim();
+                        
+                        // Mengambil harga eceran 2 (Kolom H / index 7) sebagai harga satuan (Pcs)
+                        // Hapus titik ribuan (misal "1.000" jadi "1000") sebelum diubah ke Integer
+                        let stringHarga = cols[7].replace(/['"\.]+/g, '').trim();
+                        let hargaPcs = parseInt(stringHarga) || 0;
+                        
+                        let dataBarang = { nama: nama, harga: hargaPcs };
+
+                        // Daftarkan ke database jika barcode tidak kosong
+                        if (kodeJamak !== "") database[kodeJamak] = dataBarang;
+                        if (kodeTunggal !== "") database[kodeTunggal] = dataBarang;
+                    }
+                }
+                console.log("Database berhasil dimuat! Total barcode:", Object.keys(database).length);
+                
+                // Notifikasi visual (opsional)
+                document.getElementById('barcodeInput').placeholder = "Database Siap! Scan di sini...";
+                
+            } catch (error) {
+                console.error("Error Detail:", error);
+                alert("Gagal memuat database! Pastikan koneksi aman dan file dibuka melalui Localhost (bukan file://).");
+            }
+        }
+
+        // Panggil fungsi ini saat halaman web pertama kali dimuat
+        window.onload = function() {
+            fetchDatabase();
+        };
+
+        // Listener untuk Scanner
+        document.getElementById('barcodeInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault(); 
+                prosesBarcode();
+            }
+        });
+
+        function prosesBarcode() {
+            let barcode = document.getElementById('barcodeInput').value.trim();
+            let qty = parseInt(document.getElementById('qtyInput').value);
+            let unit = document.getElementById('unitInput').value;
+
+            if (database[barcode]) {
+                let barang = database[barcode];
+                tambahKeStruk(barang.nama, qty, unit, barang.harga);
+                
+                // Reset input 
+                document.getElementById('barcodeInput').value = '';
+                document.getElementById('qtyInput').value = '1';
+                document.getElementById('barcodeInput').focus();
+            } else {
+                alert("Barcode tidak ditemukan: " + barcode);
+                document.getElementById('barcodeInput').value = '';
+                document.getElementById('barcodeInput').focus();
+            }
+        }
+
+        function tambahBarangManual() {
+            prosesBarcode();
+        }
+
+        function tambahKeStruk(nama, qty, unit, hargaSatuan) {
+            // Kalau kamu butuh logika khusus harga pak/lusin, bisa diatur di sini
+            // Sementara diasumsikan pakai multiplier
+            let multiplier = 1; 
+            if (unit === 'lusin') multiplier = 12;
+            // Asumsi 1 pak = 10 pcs (silakan disesuaikan kalau paketan beda isi)
+            if (unit === 'pak') multiplier = 10; 
+            
+            let hargaTampil = hargaSatuan * multiplier; 
+            let subtotal = hargaTampil * qty;
+            
+            totalTransaksi += subtotal;
+
+            let tbody = document.getElementById('listBarang');
+            let tr = document.createElement('tr');
+            tr.className = "border-b border-gray-200";
+            tr.innerHTML = `
+                <td class="py-2">${qty} ${unit}</td>
+                <td class="py-2">${nama}</td>
+                <td class="py-2">${hargaTampil.toLocaleString('id-ID')}</td>
+                <td class="py-2">${subtotal.toLocaleString('id-ID')}</td>
+            `;
+            tbody.appendChild(tr);
+
+            document.getElementById('totalAkhir').innerText = totalTransaksi.toLocaleString('id-ID');
+        }
+    </script>
+</body>
+</html>
