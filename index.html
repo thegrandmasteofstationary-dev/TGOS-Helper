@@ -6,22 +6,15 @@
     <title>Digital Receipt POS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Optimasi Print: Hemat Kertas & Tinta */
         @media print {
-            @page { margin: 10mm; } /* Margin kertas diperkecil */
+            @page { margin: 10mm; } 
             body { padding: 0; margin: 0; background-color: white; font-size: 12px; }
             .print-area { width: 100%; box-shadow: none; padding: 0 !important; margin: 0; }
-            
-            /* Pangkas jarak dan padding agar tabel rapat */
             th, td { padding: 2px 4px !important; }
             .mb-6 { margin-bottom: 10px !important; }
             .pt-4 { padding-top: 10px !important; }
             h3 { font-size: 16px !important; margin-bottom: 4px !important; }
-            
-            /* Sembunyikan elemen UI */
             .print\:hidden { display: none !important; }
-            
-            /* Garis tabel dibikin tipis & samar */
             .border-b-2 { border-bottom: 1px solid #000 !important; }
             .border-gray-400 { border-color: #000 !important; }
             .border-gray-200 { border-color: #ccc !important; }
@@ -30,11 +23,375 @@
 </head>
 <body class="bg-gray-100 p-4 md:p-8 flex justify-center text-gray-800">
 
-    <!-- Layout Grid Kiri (Scanner) dan Kanan (Struk) -->
     <div class="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        <!-- ================= KIRI: AREA SCANNER (Sticky) ================= -->
-        <div class="lg:col-span-4 bg-white p-6 rounded-lg shadow-md print:hidden sticky top-4">
+        <!-- ================= KIRI: AREA SCANNER ================= -->
+        <div class="lg:col-span-4 bg-white p-6 rounded-lg shadow-md print:hidden sticky top-4 flex flex-col gap-4">
+            <h2 class="text-xl font-bold border-b pb-2">Kasir / POS Scanner</h2>
+            
+            <div>
+                <label class="block text-sm font-semibold mb-1">1. Scan Barcode</label>
+                <input type="text" id="barcodeInput" class="w-full border-2 border-blue-400 rounded p-3 text-lg focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all" placeholder="Menunggu database dimuat..." disabled autofocus>
+                <p id="namaBarangPreview" class="text-sm text-green-600 font-bold mt-2 h-5"></p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 items-start">
+                <div>
+                    <label class="block text-sm font-semibold mb-1">2. Qty</label>
+                    <input type="number" id="qtyInput" class="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500" value="1" min="1" disabled>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">3. Satuan</label>
+                    <select id="unitInput" class="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500" disabled>
+                        <option value="pcs">Pcs</option>
+                        <option value="lusin">Lusin</option>
+                        <option value="pak">Pak</option>
+                    </select>
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-sm font-semibold mb-1">4. Harga (Bisa Diubah)</label>
+                    <div class="flex flex-col gap-2">
+                        <select id="hargaSelect" class="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 bg-gray-100 text-sm" disabled>
+                            <option value="">Scan barang dulu...</option>
+                        </select>
+                        <input type="number" id="customHargaInput" class="w-full border-2 border-green-400 rounded p-2 focus:ring-2 focus:ring-green-500 font-bold" placeholder="Ketik harga custom..." disabled>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WARNING BAR (Hidden by default) -->
+            <div id="warningBar" class="hidden bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r shadow-sm">
+                <div class="flex flex-col">
+                    <span class="text-yellow-800 font-bold text-sm mb-1">⚠️ Barang Sudah Ada!</span>
+                    <span class="text-yellow-700 text-xs mb-3">Barang ini sudah ada di dalam struk. Ingin menambahkannya lagi sebagai baris baru?</span>
+                    <div class="flex gap-2">
+                        <button onclick="prosesTambahKeList()" class="bg-yellow-500 text-white px-3 py-2 rounded text-xs font-bold hover:bg-yellow-600 shadow transition-colors flex-1">Tetap Tambah</button>
+                        <button onclick="batalTambah()" class="bg-gray-200 text-gray-700 px-3 py-2 rounded text-xs font-bold hover:bg-gray-300 shadow transition-colors flex-1">Batal</button>
+                    </div>
+                </div>
+            </div>
+
+            <button id="btnTambah" class="bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 w-full font-bold disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors" disabled>
+                Tambahkan ke Struk (Enter)
+            </button>
+        </div>
+
+        <!-- ================= KANAN: AREA STRUK ================= -->
+        <div class="lg:col-span-8 bg-white p-6 lg:p-8 rounded-lg shadow-md print-area flex flex-col h-full" id="strukArea">
+            <div class="mb-6">
+                <p><strong>Tanggal:</strong> <span id="displayTanggal"></span></p>
+                <div class="flex items-center gap-2 mt-2">
+                    <strong>Tuan Toko:</strong> 
+                    <input type="text" id="inputTuanToko" class="border-b focus:outline-none print:hidden w-64" placeholder="Ketik nama pelanggan...">
+                    <span id="printTuanToko" class="hidden print:inline-block border-b border-black w-64 min-h-[1.5rem]"></span>
+                </div>
+                <div class="flex items-center gap-2 mt-2">
+                    <strong>Catatan&nbsp;&nbsp;&nbsp;&nbsp;:</strong> 
+                    <input type="text" id="inputCatatan" class="border-b focus:outline-none print:hidden w-80 text-sm" placeholder="Tambahkan catatan (opsional)...">
+                    <span id="printCatatan" class="hidden print:inline-block border-b border-black w-80 min-h-[1.5rem] text-sm"></span>
+                </div>
+            </div>
+
+            <table class="w-full text-left mb-6 border-collapse">
+                <thead>
+                    <tr class="border-b-2 border-gray-400 text-sm">
+                        <th class="py-2 w-[5%] text-center">No</th>
+                        <th class="py-2 w-[15%]">Banyaknya</th>
+                        <th class="py-2 w-[35%]">Nama Barang</th>
+                        <th class="py-2 w-[20%]">Harga</th>
+                        <th class="py-2 w-[15%]">Jumlah</th>
+                        <th class="py-2 w-[10%] text-center print:hidden">Hapus</th>
+                    </tr>
+                </thead>
+                <tbody id="listBarang">
+                    <!-- Data barang masuk sini -->
+                </tbody>
+            </table>
+
+            <div class="border-t-2 border-gray-400 pt-4 flex flex-col items-end mt-auto">
+                <h3 class="text-xl font-bold mb-2">Total: Rp <span id="totalAkhir">0</span></h3>
+                <p class="text-lg font-semibold italic">Toko Faster</p>
+            </div>
+
+            <div class="mt-6 flex justify-end print:hidden">
+                <button onclick="window.print()" class="bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 shadow-lg flex items-center gap-2 transition-colors">
+                    🖨️ Cetak Struk / PDF
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('displayTanggal').innerText = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+        document.getElementById('inputTuanToko').addEventListener('input', function() {
+            document.getElementById('printTuanToko').innerText = this.value;
+        });
+        
+        document.getElementById('inputCatatan').addEventListener('input', function() {
+            document.getElementById('printCatatan').innerText = this.value;
+        });
+
+        let database = {};
+        let currentBarang = null; 
+
+        async function fetchDatabase() {
+            const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQqFjmQEMLJl-UhiBkV6hDmVePKMGhWgUkwqPWiUOcv6YeBjX9-mw75au_WztJIkcbwr0D2hcDAGZrw/pub?gid=1746227063&single=true&output=csv';
+            
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("Gagal mengambil data");
+                const csvText = await response.text();
+                const rows = csvText.split('\n');
+                
+                for (let i = 1; i < rows.length; i++) {
+                    const cols = rows[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    if (cols.length >= 8) { 
+                        let nama = cols[1].replace(/['"]+/g, '').trim();
+                        let kodeJamak = cols[2].replace(/['"]+/g, '').trim();
+                        let kodeTunggal = cols[3].replace(/['"]+/g, '').trim();
+                        
+                        let hargaG1 = parseInt(cols[4].replace(/['"\.]+/g, '').trim()) || 0;
+                        let hargaG2 = parseInt(cols[5].replace(/['"\.]+/g, '').trim()) || 0;
+                        let hargaE1 = parseInt(cols[6].replace(/['"\.]+/g, '').trim()) || 0;
+                        let hargaE2 = parseInt(cols[7].replace(/['"\.]+/g, '').trim()) || 0;
+                        
+                        let baseData = { nama, g1: hargaG1, g2: hargaG2, e1: hargaE1, e2: hargaE2 };
+
+                        if (kodeJamak !== "") database[kodeJamak] = { ...baseData, tipe: 'jamak' };
+                        if (kodeTunggal !== "") database[kodeTunggal] = { ...baseData, tipe: 'tunggal' };
+                    }
+                }
+                
+                let inputScanner = document.getElementById('barcodeInput');
+                inputScanner.disabled = false;
+                inputScanner.placeholder = "Siap! Scan barcode di sini...";
+                inputScanner.focus();
+                
+            } catch (error) {
+                console.error("Error Detail:", error);
+                document.getElementById('namaBarangPreview').innerText = "Gagal memuat database!";
+                document.getElementById('namaBarangPreview').classList.replace('text-green-600', 'text-red-600');
+            }
+        }
+
+        window.onload = fetchDatabase;
+
+        // 1. Logika saat Barcode discan
+        document.getElementById('barcodeInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault(); 
+                let barcode = this.value.trim();
+                if (barcode === "") return;
+
+                if (database[barcode]) {
+                    currentBarang = database[barcode];
+                    
+                    document.getElementById('namaBarangPreview').innerText = "Terdeteksi: " + currentBarang.nama;
+                    document.getElementById('namaBarangPreview').classList.replace('text-red-600', 'text-green-600');
+                    
+                    document.getElementById('qtyInput').disabled = false;
+                    document.getElementById('unitInput').disabled = false;
+                    
+                    let hargaSelect = document.getElementById('hargaSelect');
+                    let customHargaInput = document.getElementById('customHargaInput');
+                    
+                    hargaSelect.disabled = false;
+                    hargaSelect.classList.remove('bg-gray-100');
+                    customHargaInput.disabled = false;
+                    document.getElementById('btnTambah').disabled = false;
+
+                    if (currentBarang.tipe === 'tunggal') {
+                        hargaSelect.innerHTML = `
+                            <option value="${currentBarang.e2}">Eceran 2 (Rp ${currentBarang.e2.toLocaleString('id-ID')})</option>
+                            <option value="${currentBarang.e1}">Eceran 1 (Rp ${currentBarang.e1.toLocaleString('id-ID')})</option>
+                        `;
+                    } else if (currentBarang.tipe === 'jamak') {
+                        hargaSelect.innerHTML = `
+                            <option value="${currentBarang.g2}">Grosir 2 (Rp ${currentBarang.g2.toLocaleString('id-ID')})</option>
+                            <option value="${currentBarang.g1}">Grosir 1 (Rp ${currentBarang.g1.toLocaleString('id-ID')})</option>
+                        `;
+                    }
+
+                    customHargaInput.value = hargaSelect.value;
+                    hargaSelect.onchange = function() { customHargaInput.value = this.value; };
+
+                    document.getElementById('qtyInput').focus();
+                    document.getElementById('qtyInput').select();
+
+                } else {
+                    document.getElementById('namaBarangPreview').innerText = "❌ Barcode tidak ditemukan!";
+                    document.getElementById('namaBarangPreview').classList.replace('text-green-600', 'text-red-600');
+                    this.value = '';
+                }
+            }
+        });
+
+        // 2. Tombol Enter di area Staging
+        ['qtyInput', 'unitInput', 'hargaSelect', 'customHargaInput'].forEach(id => {
+            document.getElementById(id).addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    cekRedundansi();
+                }
+            });
+        });
+
+        document.getElementById('btnTambah').addEventListener('click', cekRedundansi);
+
+        // 3. Pengecekan Redundansi dengan Warning Bar
+        function cekRedundansi() {
+            if (!currentBarang) return;
+
+            let namaBarangBaru = currentBarang.nama;
+            let listNamaSekarang = Array.from(document.querySelectorAll('.row-nama')).map(ta => ta.value);
+            
+            if (listNamaSekarang.includes(namaBarangBaru)) {
+                // Munculkan Warning Bar, Sembunyikan tombol Tambah utama
+                document.getElementById('warningBar').classList.remove('hidden');
+                document.getElementById('btnTambah').classList.add('hidden');
+            } else {
+                // Lanjut tambah jika belum ada
+                prosesTambahKeList();
+            }
+        }
+
+        // Aksi Batal dari Warning Bar
+        function batalTambah() {
+            sembunyikanWarningBar();
+            resetAreaInput();
+        }
+
+        function sembunyikanWarningBar() {
+            document.getElementById('warningBar').classList.add('hidden');
+            document.getElementById('btnTambah').classList.remove('hidden');
+        }
+
+        // 4. Masukkan ke List Akhir
+        function prosesTambahKeList() {
+            let qty = parseInt(document.getElementById('qtyInput').value) || 1;
+            let unit = document.getElementById('unitInput').value;
+            let hargaSatuan = parseInt(document.getElementById('customHargaInput').value) || 0;
+
+            let tbody = document.getElementById('listBarang');
+            let tr = document.createElement('tr');
+            tr.className = "border-b border-gray-200 baris-barang hover:bg-gray-50 transition-colors";
+
+            tr.innerHTML = `
+                <td class="py-2 align-top text-sm text-center font-semibold">
+                    <span class="nomor-urut"></span>
+                </td>
+                <td class="py-2 align-top text-sm">
+                    <div class="print:hidden flex gap-1 items-center">
+                        <input type="number" class="w-14 border rounded p-1 text-sm row-qty focus:ring-2 focus:ring-blue-400" value="${qty}" min="1">
+                        <select class="border rounded p-1 text-sm row-unit focus:ring-2 focus:ring-blue-400">
+                            <option value="pcs" ${unit==='pcs'?'selected':''}>Pcs</option>
+                            <option value="lusin" ${unit==='lusin'?'selected':''}>Lusin</option>
+                            <option value="pak" ${unit==='pak'?'selected':''}>Pak</option>
+                        </select>
+                    </div>
+                    <div class="hidden print:block print-qty text-sm mt-1"></div>
+                </td>
+                <td class="py-2 align-top pr-2">
+                    <textarea class="w-full border rounded p-1 text-sm focus:ring-2 focus:ring-blue-400 print:hidden row-nama resize-none h-10">${currentBarang.nama}</textarea>
+                    <div class="hidden print:block print-nama text-sm mt-1"></div>
+                </td>
+                <td class="py-2 align-top pr-2">
+                    <div class="print:hidden">
+                        <input type="number" class="w-full border rounded p-1 text-sm row-harga focus:ring-2 focus:ring-blue-400" value="${hargaSatuan}">
+                    </div>
+                    <div class="hidden print:block print-harga text-sm mt-1"></div>
+                </td>
+                <td class="py-2 align-top">
+                    <span class="subtotal-teks font-medium text-sm">Rp 0</span>
+                </td>
+                <td class="py-2 align-top text-center print:hidden">
+                    <button class="text-red-500 hover:text-red-700 font-bold btn-hapus" title="Hapus Baris">✕</button>
+                </td>
+            `;
+
+            let inputs = tr.querySelectorAll('.row-qty, .row-unit, .row-harga, .row-nama');
+            inputs.forEach(input => {
+                input.addEventListener('input', updateBaris);
+                input.addEventListener('change', updateBaris);
+            });
+
+            tr.querySelector('.btn-hapus').addEventListener('click', function() {
+                tr.remove();
+                hitungTotalSemua();
+                updateNomorUrut(); 
+            });
+
+            function updateBaris() {
+                let rQty = parseInt(tr.querySelector('.row-qty').value) || 0;
+                let rUnit = tr.querySelector('.row-unit').value;
+                let rHarga = parseInt(tr.querySelector('.row-harga').value) || 0;
+                let rNama = tr.querySelector('.row-nama').value;
+
+                tr.querySelector('.print-qty').innerText = rQty + ' ' + rUnit;
+                tr.querySelector('.print-nama').innerText = rNama;
+                tr.querySelector('.print-harga').innerText = rHarga.toLocaleString('id-ID');
+
+                let rSubtotal = rHarga * rQty;
+                tr.querySelector('.subtotal-teks').innerText = 'Rp ' + rSubtotal.toLocaleString('id-ID');
+
+                hitungTotalSemua();
+            }
+
+            tbody.appendChild(tr);
+            updateBaris(); 
+            updateNomorUrut(); 
+            
+            // Tutup warning bar jika sebelumnya terbuka
+            sembunyikanWarningBar();
+            resetAreaInput();
+        }
+
+        // 5. Fungsi Reset Form
+        function resetAreaInput() {
+            currentBarang = null;
+            document.getElementById('barcodeInput').value = '';
+            document.getElementById('namaBarangPreview').innerText = '';
+            document.getElementById('qtyInput').value = '1';
+            document.getElementById('qtyInput').disabled = true;
+            document.getElementById('unitInput').value = 'pcs';
+            document.getElementById('unitInput').disabled = true;
+            
+            let hargaSelect = document.getElementById('hargaSelect');
+            hargaSelect.innerHTML = '<option value="">Scan barang dulu...</option>';
+            hargaSelect.disabled = true;
+            hargaSelect.classList.add('bg-gray-100');
+            
+            let customHargaInput = document.getElementById('customHargaInput');
+            customHargaInput.value = '';
+            customHargaInput.disabled = true;
+            
+            document.getElementById('btnTambah').disabled = true;
+            document.getElementById('barcodeInput').focus();
+        }
+
+        function updateNomorUrut() {
+            let baris = document.querySelectorAll('.baris-barang');
+            baris.forEach((tr, index) => {
+                tr.querySelector('.nomor-urut').innerText = index + 1;
+            });
+        }
+
+        function hitungTotalSemua() {
+            let grandTotal = 0;
+            let rows = document.querySelectorAll('.baris-barang');
+            
+            rows.forEach(tr => {
+                let rQty = parseInt(tr.querySelector('.row-qty').value) || 0;
+                let rHarga = parseInt(tr.querySelector('.row-harga').value) || 0;
+                grandTotal += (rQty * rHarga);
+            });
+
+            document.getElementById('totalAkhir').innerText = grandTotal.toLocaleString('id-ID');
+        }
+    </script>
+</body>
+</html>        <div class="lg:col-span-4 bg-white p-6 rounded-lg shadow-md print:hidden sticky top-4">
             <h2 class="text-xl font-bold mb-4">Kasir / POS Scanner</h2>
             
             <div class="mb-4">
