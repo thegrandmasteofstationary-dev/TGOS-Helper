@@ -314,6 +314,33 @@ tr.innerHTML = `
         function updateTotal() {
             document.getElementById('totalAkhir').innerText = totalTransaksi.toLocaleString('id-ID');
         }
+
+        function updateRowTotal(input, fixedPrice) {
+            let tr = input.closest('tr');
+            let qtyInput = tr.cells[0].querySelector('input').value;
+            let hargaInput = tr.cells[2].querySelector('input').value;
+            
+            let newQty = parseFloat(qtyInput) || 0;
+            let newHarga = parseInt(hargaInput) || 0;
+            let newSubtotal = newQty * newHarga;
+        
+            // Update tampilan subtotal di baris tersebut
+            tr.querySelector('.subtotal-text').innerText = newSubtotal.toLocaleString('id-ID');
+            tr.dataset.subtotal = newSubtotal;
+        
+            // Hitung ulang total keseluruhan
+            recalculateGrandTotal();
+        }
+        
+        function recalculateGrandTotal() {
+            let allRows = document.querySelectorAll('.baris-barang');
+            let total = 0;
+            allRows.forEach(row => {
+                total += parseInt(row.dataset.subtotal) || 0;
+            });
+            totalTransaksi = total;
+            document.getElementById('totalAkhir').innerText = total.toLocaleString('id-ID');
+        }
     </script>
 </body>
 </html>
