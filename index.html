@@ -6,17 +6,35 @@
     <title>Digital Receipt POS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* Optimasi Print: Hemat Kertas & Tinta */
         @media print {
-            body { padding: 0; margin: 0; background-color: white; }
-            .print-area { width: 100%; box-shadow: none; padding: 0; }
+            @page { margin: 10mm; } /* Margin kertas diperkecil */
+            body { padding: 0; margin: 0; background-color: white; font-size: 12px; }
+            .print-area { width: 100%; box-shadow: none; padding: 0 !important; margin: 0; }
+            
+            /* Pangkas jarak dan padding agar tabel rapat */
+            th, td { padding: 2px 4px !important; }
+            .mb-6 { margin-bottom: 10px !important; }
+            .pt-4 { padding-top: 10px !important; }
+            h3 { font-size: 16px !important; margin-bottom: 4px !important; }
+            
+            /* Sembunyikan elemen UI */
+            .print\:hidden { display: none !important; }
+            
+            /* Garis tabel dibikin tipis & samar */
+            .border-b-2 { border-bottom: 1px solid #000 !important; }
+            .border-gray-400 { border-color: #000 !important; }
+            .border-gray-200 { border-color: #ccc !important; }
         }
     </style>
 </head>
-<body class="bg-gray-100 p-8 flex justify-center text-gray-800">
+<body class="bg-gray-100 p-4 md:p-8 flex justify-center text-gray-800">
 
-    <div class="max-w-5xl w-full">
-        <!-- Area Input / Staging Area -->
-        <div class="bg-white p-6 rounded-lg shadow-md mb-6 print:hidden">
+    <!-- Layout Grid Kiri (Scanner) dan Kanan (Struk) -->
+    <div class="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- ================= KIRI: AREA SCANNER (Sticky) ================= -->
+        <div class="lg:col-span-4 bg-white p-6 rounded-lg shadow-md print:hidden sticky top-4">
             <h2 class="text-xl font-bold mb-4">Kasir / POS Scanner</h2>
             
             <div class="mb-4">
@@ -25,7 +43,7 @@
                 <p id="namaBarangPreview" class="text-sm text-green-600 font-bold mt-2 h-5"></p>
             </div>
 
-            <div class="grid grid-cols-4 gap-4 items-start mb-4">
+            <div class="grid grid-cols-2 gap-4 items-start mb-4">
                 <div>
                     <label class="block text-sm font-semibold mb-1">2. Qty</label>
                     <input type="number" id="qtyInput" class="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500" value="1" min="1" disabled>
@@ -39,7 +57,7 @@
                     </select>
                 </div>
                 <div class="col-span-2">
-                    <label class="block text-sm font-semibold mb-1">4. Harga</label>
+                    <label class="block text-sm font-semibold mb-1">4. Harga (Bisa Diubah)</label>
                     <div class="flex flex-col gap-2">
                         <select id="hargaSelect" class="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 bg-gray-100 text-sm" disabled>
                             <option value="">Scan barang dulu...</option>
@@ -54,8 +72,8 @@
             </button>
         </div>
 
-        <!-- Area Struk -->
-        <div class="bg-white p-8 rounded-lg shadow-md print-area" id="strukArea">
+        <!-- ================= KANAN: AREA STRUK ================= -->
+        <div class="lg:col-span-8 bg-white p-6 lg:p-8 rounded-lg shadow-md print-area flex flex-col h-full" id="strukArea">
             <div class="mb-6">
                 <p><strong>Tanggal:</strong> <span id="displayTanggal"></span></p>
                 <div class="flex items-center gap-2 mt-2">
@@ -63,7 +81,6 @@
                     <input type="text" id="inputTuanToko" class="border-b focus:outline-none print:hidden w-64" placeholder="Ketik nama pelanggan...">
                     <span id="printTuanToko" class="hidden print:inline-block border-b border-black w-64 min-h-[1.5rem]"></span>
                 </div>
-                <!-- Kolom Catatan -->
                 <div class="flex items-center gap-2 mt-2">
                     <strong>Catatan&nbsp;&nbsp;&nbsp;&nbsp;:</strong> 
                     <input type="text" id="inputCatatan" class="border-b focus:outline-none print:hidden w-80 text-sm" placeholder="Tambahkan catatan (opsional)...">
@@ -74,9 +91,10 @@
             <table class="w-full text-left mb-6 border-collapse">
                 <thead>
                     <tr class="border-b-2 border-gray-400 text-sm">
-                        <th class="py-2 w-[18%]">Banyaknya</th>
+                        <th class="py-2 w-[5%] text-center">No</th>
+                        <th class="py-2 w-[15%]">Banyaknya</th>
                         <th class="py-2 w-[35%]">Nama Barang</th>
-                        <th class="py-2 w-[22%]">Harga</th>
+                        <th class="py-2 w-[20%]">Harga</th>
                         <th class="py-2 w-[15%]">Jumlah</th>
                         <th class="py-2 w-[10%] text-center print:hidden">Hapus</th>
                     </tr>
@@ -86,17 +104,18 @@
                 </tbody>
             </table>
 
-            <div class="border-t-2 border-gray-400 pt-4 flex flex-col items-end">
-                <h3 class="text-xl font-bold mb-4">Total: Rp <span id="totalAkhir">0</span></h3>
+            <!-- Total Harga (Didorong ke bawah dengan mt-auto biar rapi) -->
+            <div class="border-t-2 border-gray-400 pt-4 flex flex-col items-end mt-auto">
+                <h3 class="text-xl font-bold mb-2">Total: Rp <span id="totalAkhir">0</span></h3>
                 <p class="text-lg font-semibold italic">Toko Faster</p>
             </div>
-        </div>
 
-        <!-- Tombol Print -->
-        <div class="mt-6 flex justify-end print:hidden">
-            <button onclick="window.print()" class="bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 shadow-lg flex items-center gap-2">
-                🖨️ Cetak Struk / PDF
-            </button>
+            <!-- Tombol Print di dalam area kanan bawah -->
+            <div class="mt-6 flex justify-end print:hidden">
+                <button onclick="window.print()" class="bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 shadow-lg flex items-center gap-2">
+                    🖨️ Cetak Struk / PDF
+                </button>
+            </div>
         </div>
     </div>
 
@@ -125,7 +144,6 @@
                 
                 for (let i = 1; i < rows.length; i++) {
                     const cols = rows[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                    
                     if (cols.length >= 8) { 
                         let nama = cols[1].replace(/['"]+/g, '').trim();
                         let kodeJamak = cols[2].replace(/['"]+/g, '').trim();
@@ -216,9 +234,45 @@
 
         document.getElementById('btnTambah').addEventListener('click', tambahkanKeList);
 
-// 3. Masukkan ke List Akhir (Semua field jadi editable)
+        // Fungsi Reset Area Input
+        function resetAreaInput() {
+            currentBarang = null;
+            document.getElementById('barcodeInput').value = '';
+            document.getElementById('namaBarangPreview').innerText = '';
+            document.getElementById('qtyInput').value = '1';
+            document.getElementById('qtyInput').disabled = true;
+            document.getElementById('unitInput').value = 'pcs';
+            document.getElementById('unitInput').disabled = true;
+            
+            let hargaSelect = document.getElementById('hargaSelect');
+            hargaSelect.innerHTML = '<option value="">Scan barang dulu...</option>';
+            hargaSelect.disabled = true;
+            hargaSelect.classList.add('bg-gray-100');
+            
+            let customHargaInput = document.getElementById('customHargaInput');
+            customHargaInput.value = '';
+            customHargaInput.disabled = true;
+            
+            document.getElementById('btnTambah').disabled = true;
+            document.getElementById('barcodeInput').focus();
+        }
+
+        // 3. Masukkan ke List Akhir
         function tambahkanKeList() {
             if (!currentBarang) return;
+
+            // --- FITUR REDUNDANCY DETECTOR ---
+            let namaBarangBaru = currentBarang.nama;
+            let listNamaSekarang = Array.from(document.querySelectorAll('.row-nama')).map(ta => ta.value);
+            
+            if (listNamaSekarang.includes(namaBarangBaru)) {
+                let lanjut = confirm(`⚠️ PERINGATAN: Barang "${namaBarangBaru}" sudah ada di dalam struk!\n\nYakin ingin menambahkannya lagi sebagai baris baru?\n(Klik Batal/Cancel jika kamu hanya ingin menambahkan angka Qty di baris yang sudah ada)`);
+                if (!lanjut) {
+                    resetAreaInput();
+                    return; // Batalkan penambahan
+                }
+            }
+            // ----------------------------------
 
             let qty = parseInt(document.getElementById('qtyInput').value) || 1;
             let unit = document.getElementById('unitInput').value;
@@ -226,10 +280,12 @@
 
             let tbody = document.getElementById('listBarang');
             let tr = document.createElement('tr');
-            tr.className = "border-b border-gray-200 baris-barang";
+            tr.className = "border-b border-gray-200 baris-barang hover:bg-gray-50";
 
-            // Render baris dengan input field di dalamnya (Teks penanda harga sudah dihapus)
             tr.innerHTML = `
+                <td class="py-2 align-top text-sm text-center font-semibold">
+                    <span class="nomor-urut"></span>
+                </td>
                 <td class="py-2 align-top text-sm">
                     <div class="print:hidden flex gap-1 items-center">
                         <input type="number" class="w-14 border rounded p-1 text-sm row-qty focus:ring-2 focus:ring-blue-400" value="${qty}" min="1">
@@ -255,36 +311,32 @@
                     <span class="subtotal-teks font-medium text-sm">Rp 0</span>
                 </td>
                 <td class="py-2 align-top text-center print:hidden">
-                    <button class="text-red-500 hover:text-red-700 font-bold btn-hapus">✕</button>
+                    <button class="text-red-500 hover:text-red-700 font-bold btn-hapus" title="Hapus Baris">✕</button>
                 </td>
             `;
 
-            // Pasang event listener untuk Auto-Sum ketika field di dalam baris ini diedit
             let inputs = tr.querySelectorAll('.row-qty, .row-unit, .row-harga, .row-nama');
             inputs.forEach(input => {
                 input.addEventListener('input', updateBaris);
                 input.addEventListener('change', updateBaris);
             });
 
-            // Tombol Hapus
             tr.querySelector('.btn-hapus').addEventListener('click', function() {
                 tr.remove();
                 hitungTotalSemua();
+                updateNomorUrut(); // Re-calculate nomor setelah hapus
             });
 
-            // Fungsi kalkulasi & sinkronisasi ke tampilan print untuk baris ini
             function updateBaris() {
                 let rQty = parseInt(tr.querySelector('.row-qty').value) || 0;
                 let rUnit = tr.querySelector('.row-unit').value;
                 let rHarga = parseInt(tr.querySelector('.row-harga').value) || 0;
                 let rNama = tr.querySelector('.row-nama').value;
 
-                // Sinkronkan data ke elemen text (untuk PDF/Print)
                 tr.querySelector('.print-qty').innerText = rQty + ' ' + rUnit;
                 tr.querySelector('.print-nama').innerText = rNama;
                 tr.querySelector('.print-harga').innerText = rHarga.toLocaleString('id-ID');
 
-                // Hitung Subtotal
                 let rSubtotal = rHarga * rQty;
                 tr.querySelector('.subtotal-teks').innerText = 'Rp ' + rSubtotal.toLocaleString('id-ID');
 
@@ -292,31 +344,19 @@
             }
 
             tbody.appendChild(tr);
-            updateBaris(); // Panggil sekali untuk mengisi subtotal awal & sinkron text print
-
-            // 4. Reset Area Input atas
-            currentBarang = null;
-            document.getElementById('barcodeInput').value = '';
-            document.getElementById('namaBarangPreview').innerText = '';
-            document.getElementById('qtyInput').value = '1';
-            document.getElementById('qtyInput').disabled = true;
-            document.getElementById('unitInput').value = 'pcs';
-            document.getElementById('unitInput').disabled = true;
-            
-            let hargaSelect = document.getElementById('hargaSelect');
-            hargaSelect.innerHTML = '<option value="">Scan barang dulu...</option>';
-            hargaSelect.disabled = true;
-            hargaSelect.classList.add('bg-gray-100');
-            
-            let customHargaInput = document.getElementById('customHargaInput');
-            customHargaInput.value = '';
-            customHargaInput.disabled = true;
-            
-            document.getElementById('btnTambah').disabled = true;
-            document.getElementById('barcodeInput').focus();
+            updateBaris(); 
+            updateNomorUrut(); // Update nomor urut saat baris baru ditambahkan
+            resetAreaInput();
         }
 
-        // Fungsi Global untuk merekap semua subtotal menjadi Grand Total
+        // Fungsi Update Nomor Urut
+        function updateNomorUrut() {
+            let baris = document.querySelectorAll('.baris-barang');
+            baris.forEach((tr, index) => {
+                tr.querySelector('.nomor-urut').innerText = index + 1;
+            });
+        }
+
         function hitungTotalSemua() {
             let grandTotal = 0;
             let rows = document.querySelectorAll('.baris-barang');
