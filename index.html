@@ -59,18 +59,6 @@
                 </div>
             </div>
 
-            <!-- WARNING BAR (Hidden by default) -->
-            <div id="warningBar" class="hidden bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r shadow-sm">
-                <div class="flex flex-col">
-                    <span class="text-yellow-800 font-bold text-sm mb-1">⚠️ Barang Sudah Ada!</span>
-                    <span class="text-yellow-700 text-xs mb-3">Barang ini sudah ada di dalam struk. Ingin menambahkannya lagi sebagai baris baru?</span>
-                    <div class="flex gap-2">
-                        <button onclick="prosesTambahKeList()" class="bg-yellow-500 text-white px-3 py-2 rounded text-xs font-bold hover:bg-yellow-600 shadow transition-colors flex-1">Tetap Tambah</button>
-                        <button onclick="batalTambah()" class="bg-gray-200 text-gray-700 px-3 py-2 rounded text-xs font-bold hover:bg-gray-300 shadow transition-colors flex-1">Batal</button>
-                    </div>
-                </div>
-            </div>
-
             <button id="btnTambah" class="bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 w-full font-bold disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors" disabled>
                 Tambahkan ke Struk (Enter)
             </button>
@@ -90,6 +78,12 @@
                     <input type="text" id="inputCatatan" class="border-b focus:outline-none print:hidden w-80 text-sm" placeholder="Tambahkan catatan (opsional)...">
                     <span id="printCatatan" class="hidden print:inline-block border-b border-black w-80 min-h-[1.5rem] text-sm"></span>
                 </div>
+            </div>
+
+            <!-- INFO BAR REDUNDANSI (Pasif, hanya muncul kalau ada dobel) -->
+            <div id="infoRedundansi" class="hidden print:hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-3 rounded shadow-sm mb-4 text-sm transition-all">
+                <strong class="font-bold">⚠️ Terdapat Redundansi Baris:</strong>
+                <span class="block sm:inline" id="teksRedundansi"></span>
             </div>
 
             <table class="w-full text-left mb-6 border-collapse">
@@ -227,48 +221,22 @@
             }
         });
 
-        // 2. Tombol Enter di area Staging
+        // 2. Tombol Enter di area Staging langsung memicu Tambah (Tanpa Block)
         ['qtyInput', 'unitInput', 'hargaSelect', 'customHargaInput'].forEach(id => {
             document.getElementById(id).addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    cekRedundansi();
+                    prosesTambahKeList();
                 }
             });
         });
 
-        document.getElementById('btnTambah').addEventListener('click', cekRedundansi);
+        document.getElementById('btnTambah').addEventListener('click', prosesTambahKeList);
 
-        // 3. Pengecekan Redundansi dengan Warning Bar
-        function cekRedundansi() {
+        // 3. Masukkan ke List Akhir
+        function prosesTambahKeList() {
             if (!currentBarang) return;
 
-            let namaBarangBaru = currentBarang.nama;
-            let listNamaSekarang = Array.from(document.querySelectorAll('.row-nama')).map(ta => ta.value);
-            
-            if (listNamaSekarang.includes(namaBarangBaru)) {
-                // Munculkan Warning Bar, Sembunyikan tombol Tambah utama
-                document.getElementById('warningBar').classList.remove('hidden');
-                document.getElementById('btnTambah').classList.add('hidden');
-            } else {
-                // Lanjut tambah jika belum ada
-                prosesTambahKeList();
-            }
-        }
-
-        // Aksi Batal dari Warning Bar
-        function batalTambah() {
-            sembunyikanWarningBar();
-            resetAreaInput();
-        }
-
-        function sembunyikanWarningBar() {
-            document.getElementById('warningBar').classList.add('hidden');
-            document.getElementById('btnTambah').classList.remove('hidden');
-        }
-
-        // 4. Masukkan ke List Akhir
-        function prosesTambahKeList() {
             let qty = parseInt(document.getElementById('qtyInput').value) || 1;
             let unit = document.getElementById('unitInput').value;
             let hargaSatuan = parseInt(document.getElementById('customHargaInput').value) || 0;
@@ -320,6 +288,7 @@
                 tr.remove();
                 hitungTotalSemua();
                 updateNomorUrut(); 
+                cekSemuaRedundansi(); // Cek lagi setelah ada yang dihapus
             });
 
             function updateBaris() {
@@ -336,15 +305,43 @@
                 tr.querySelector('.subtotal-teks').innerText = 'Rp ' + rSubtotal.toLocaleString('id-ID');
 
                 hitungTotalSemua();
+                cekSemuaRedundansi(); // Cek real-time kalau nama barang diedit manual
             }
 
             tbody.appendChild(tr);
             updateBaris(); 
             updateNomorUrut(); 
             
-            // Tutup warning bar jika sebelumnya terbuka
-            sembunyikanWarningBar();
+            // Panggil radar redundansi
+            cekSemuaRedundansi();
+            
             resetAreaInput();
+        }
+
+        // 4. RADAR REDUNDANSI (Pasif)
+        function cekSemuaRedundansi() {
+            let listNama = Array.from(document.querySelectorAll('.row-nama')).map(ta => ta.value.trim());
+            let counts = {};
+            
+            // Hitung kemunculan tiap nama
+            listNama.forEach(nama => {
+                counts[nama] = (counts[nama] || 0) + 1;
+            });
+
+            let redundanItems = [];
+            for (let nama in counts) {
+                if (counts[nama] > 1 && nama !== "") {
+                    redundanItems.push(`${nama} (${counts[nama]} baris)`);
+                }
+            }
+
+            let infoBar = document.getElementById('infoRedundansi');
+            if (redundanItems.length > 0) {
+                document.getElementById('teksRedundansi').innerText = redundanItems.join(', ');
+                infoBar.classList.remove('hidden');
+            } else {
+                infoBar.classList.add('hidden');
+            }
         }
 
         // 5. Fungsi Reset Form
