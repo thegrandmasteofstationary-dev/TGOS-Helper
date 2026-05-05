@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="https://i.pinimg.com/736x/e6/15/8a/e6158a874db2d651dc166e7641c589e3.jpg">
     <title>Digital Receipt POS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -13,9 +12,9 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 p-8 flex justify-center text-gray-800" style="background-image: url('https://i.pinimg.com/1200x/f0/08/89/f00889984e6184efffcd2d8df6cc84cb.jpg'); background-size: cover; background-position: center; background-attachment: fixed;">
+<body class="bg-gray-100 p-8 flex justify-center text-gray-800">
 
-    <div class="max-w-4xl w-full">
+    <div class="max-w-5xl w-full">
         <!-- Area Input / Staging Area -->
         <div class="bg-white p-6 rounded-lg shadow-md mb-6 print:hidden">
             <h2 class="text-xl font-bold mb-4">Kasir / POS Scanner</h2>
@@ -40,7 +39,7 @@
                     </select>
                 </div>
                 <div class="col-span-2">
-                    <label class="block text-sm font-semibold mb-1">4. Harga</label>
+                    <label class="block text-sm font-semibold mb-1">4. Harga (Bisa Diubah Manual)</label>
                     <div class="flex flex-col gap-2">
                         <select id="hargaSelect" class="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 bg-gray-100 text-sm" disabled>
                             <option value="">Scan barang dulu...</option>
@@ -64,7 +63,7 @@
                     <input type="text" id="inputTuanToko" class="border-b focus:outline-none print:hidden w-64" placeholder="Ketik nama pelanggan...">
                     <span id="printTuanToko" class="hidden print:inline-block border-b border-black w-64 min-h-[1.5rem]"></span>
                 </div>
-                <!-- Tambahan Kolom Catatan -->
+                <!-- Kolom Catatan -->
                 <div class="flex items-center gap-2 mt-2">
                     <strong>Catatan&nbsp;&nbsp;&nbsp;&nbsp;:</strong> 
                     <input type="text" id="inputCatatan" class="border-b focus:outline-none print:hidden w-80 text-sm" placeholder="Tambahkan catatan (opsional)...">
@@ -75,9 +74,9 @@
             <table class="w-full text-left mb-6 border-collapse">
                 <thead>
                     <tr class="border-b-2 border-gray-400 text-sm">
-                        <th class="py-2 w-[15%]">Banyaknya</th>
-                        <th class="py-2 w-[40%]">Nama Barang</th>
-                        <th class="py-2 w-[20%]">Harga</th>
+                        <th class="py-2 w-[18%]">Banyaknya</th>
+                        <th class="py-2 w-[35%]">Nama Barang</th>
+                        <th class="py-2 w-[22%]">Harga</th>
                         <th class="py-2 w-[15%]">Jumlah</th>
                         <th class="py-2 w-[10%] text-center print:hidden">Hapus</th>
                     </tr>
@@ -90,7 +89,6 @@
             <div class="border-t-2 border-gray-400 pt-4 flex flex-col items-end">
                 <h3 class="text-xl font-bold mb-4">Total: Rp <span id="totalAkhir">0</span></h3>
                 <p class="text-lg font-semibold italic">Toko Faster</p>
-                <p class="text-lg font-light italic">Jl. Tugu Pahlawan No.43, Bukit Cermin, Kec. Tanjungpinang Bar., Kota Tanjung Pinang, Kepulauan Riau</p>
             </div>
         </div>
 
@@ -109,14 +107,12 @@
             document.getElementById('printTuanToko').innerText = this.value;
         });
         
-        // Sinkronisasi Catatan
         document.getElementById('inputCatatan').addEventListener('input', function() {
             document.getElementById('printCatatan').innerText = this.value;
         });
 
         let database = {};
         let currentBarang = null; 
-        let totalTransaksi = 0;
 
         async function fetchDatabase() {
             const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQqFjmQEMLJl-UhiBkV6hDmVePKMGhWgUkwqPWiUOcv6YeBjX9-mw75au_WztJIkcbwr0D2hcDAGZrw/pub?gid=1746227063&single=true&output=csv';
@@ -183,7 +179,6 @@
                     customHargaInput.disabled = false;
                     document.getElementById('btnTambah').disabled = false;
 
-                    // Setup Dropdown sesuai tipe
                     if (currentBarang.tipe === 'tunggal') {
                         hargaSelect.innerHTML = `
                             <option value="${currentBarang.e2}">Eceran 2 (Rp ${currentBarang.e2.toLocaleString('id-ID')})</option>
@@ -196,13 +191,8 @@
                         `;
                     }
 
-                    // Set nilai default custom harga dari dropdown
                     customHargaInput.value = hargaSelect.value;
-
-                    // Jika dropdown berubah, update custom harga
-                    hargaSelect.onchange = function() {
-                        customHargaInput.value = this.value;
-                    };
+                    hargaSelect.onchange = function() { customHargaInput.value = this.value; };
 
                     document.getElementById('qtyInput').focus();
                     document.getElementById('qtyInput').select();
@@ -214,7 +204,7 @@
             }
         });
 
-        // 2. Tombol Enter di form Qty/Satuan/Harga akan memicu Tambah
+        // 2. Tombol Enter di area Staging
         ['qtyInput', 'unitInput', 'hargaSelect', 'customHargaInput'].forEach(id => {
             document.getElementById(id).addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
@@ -226,61 +216,90 @@
 
         document.getElementById('btnTambah').addEventListener('click', tambahkanKeList);
 
-        // 3. Masukkan ke List
+        // 3. Masukkan ke List Akhir (Semua field jadi editable)
         function tambahkanKeList() {
             if (!currentBarang) return;
 
             let qty = parseInt(document.getElementById('qtyInput').value) || 1;
             let unit = document.getElementById('unitInput').value;
-            
-            // Ambil harga dari input manual (final decision ada di sini)
             let hargaSatuan = parseInt(document.getElementById('customHargaInput').value) || 0;
             
-            // Cek apakah user mengubah harga secara manual di luar opsi dropdown
             let hargaDropdown = parseInt(document.getElementById('hargaSelect').value);
             let teksHarga = document.getElementById('hargaSelect').options[document.getElementById('hargaSelect').selectedIndex].text;
-            
-            if (hargaSatuan !== hargaDropdown) {
-                teksHarga = "Harga Custom";
-            }
-
-            // Perhitungan fix, tidak pakai multiplier
-            let subtotal = hargaSatuan * qty;
-
-            totalTransaksi += subtotal;
+            if (hargaSatuan !== hargaDropdown) teksHarga = "Harga Custom";
 
             let tbody = document.getElementById('listBarang');
             let tr = document.createElement('tr');
             tr.className = "border-b border-gray-200 baris-barang";
-            tr.dataset.subtotal = subtotal; 
 
-tr.innerHTML = `
-    <td class="py-2 text-sm">
-        <input type="number" value="${qty}" 
-               class="w-12 bg-transparent focus:outline-none border-b border-transparent hover:border-gray-300 focus:border-blue-500 print:border-none"
-               onchange="updateRowTotal(this, ${hargaSatuan})"> 
-        ${unit}
-    </td>
-    <td class="py-2 text-sm">
-        <input type="text" value="${currentBarang.nama}" 
-               class="w-full bg-transparent focus:outline-none border-b border-transparent hover:border-gray-300 focus:border-blue-500 print:border-none">
-    </td>
-    <td class="py-2 text-sm">
-        <input type="number" value="${hargaSatuan}" 
-               class="w-24 bg-transparent focus:outline-none border-b border-transparent hover:border-gray-300 focus:border-blue-500 print:border-none font-medium"
-               onchange="updateRowTotal(this, null)">
-    </td>
-    <td class="py-2 text-sm font-medium">Rp <span class="subtotal-text">${subtotal.toLocaleString('id-ID')}</span></td>
-    <td class="py-2 text-center print:hidden">
-        <button onclick="hapusBaris(this)" class="text-red-500 hover:text-red-700 font-bold">✕</button>
-    </td>
-`;
+            // Render baris dengan input field di dalamnya
+            tr.innerHTML = `
+                <td class="py-2 align-top text-sm">
+                    <div class="print:hidden flex gap-1 items-center">
+                        <input type="number" class="w-14 border rounded p-1 text-sm row-qty focus:ring-2 focus:ring-blue-400" value="${qty}" min="1">
+                        <select class="border rounded p-1 text-sm row-unit focus:ring-2 focus:ring-blue-400">
+                            <option value="pcs" ${unit==='pcs'?'selected':''}>Pcs</option>
+                            <option value="lusin" ${unit==='lusin'?'selected':''}>Lusin</option>
+                            <option value="pak" ${unit==='pak'?'selected':''}>Pak</option>
+                        </select>
+                    </div>
+                    <div class="hidden print:block print-qty text-sm mt-1"></div>
+                </td>
+                <td class="py-2 align-top pr-2">
+                    <textarea class="w-full border rounded p-1 text-sm focus:ring-2 focus:ring-blue-400 print:hidden row-nama resize-none h-10">${currentBarang.nama}</textarea>
+                    <div class="hidden print:block print-nama text-sm mt-1"></div>
+                </td>
+                <td class="py-2 align-top pr-2">
+                    <div class="print:hidden">
+                        <input type="number" class="w-full border rounded p-1 text-sm row-harga focus:ring-2 focus:ring-blue-400" value="${hargaSatuan}">
+                        <div class="text-xs text-gray-500 mt-1">${teksHarga}</div>
+                    </div>
+                    <div class="hidden print:block print-harga text-sm mt-1"></div>
+                </td>
+                <td class="py-2 align-top">
+                    <span class="subtotal-teks font-medium text-sm">Rp 0</span>
+                </td>
+                <td class="py-2 align-top text-center print:hidden">
+                    <button class="text-red-500 hover:text-red-700 font-bold btn-hapus">✕</button>
+                </td>
             `;
 
-            tbody.appendChild(tr);
-            updateTotal();
+            // Pasang event listener untuk Auto-Sum ketika field di dalam baris ini diedit
+            let inputs = tr.querySelectorAll('.row-qty, .row-unit, .row-harga, .row-nama');
+            inputs.forEach(input => {
+                input.addEventListener('input', updateBaris);
+                input.addEventListener('change', updateBaris);
+            });
 
-            // 4. Reset Area
+            // Tombol Hapus
+            tr.querySelector('.btn-hapus').addEventListener('click', function() {
+                tr.remove();
+                hitungTotalSemua();
+            });
+
+            // Fungsi kalkulasi & sinkronisasi ke tampilan print untuk baris ini
+            function updateBaris() {
+                let rQty = parseInt(tr.querySelector('.row-qty').value) || 0;
+                let rUnit = tr.querySelector('.row-unit').value;
+                let rHarga = parseInt(tr.querySelector('.row-harga').value) || 0;
+                let rNama = tr.querySelector('.row-nama').value;
+
+                // Sinkronkan data ke elemen text (untuk PDF/Print)
+                tr.querySelector('.print-qty').innerText = rQty + ' ' + rUnit;
+                tr.querySelector('.print-nama').innerText = rNama;
+                tr.querySelector('.print-harga').innerText = rHarga.toLocaleString('id-ID');
+
+                // Hitung Subtotal
+                let rSubtotal = rHarga * rQty;
+                tr.querySelector('.subtotal-teks').innerText = 'Rp ' + rSubtotal.toLocaleString('id-ID');
+
+                hitungTotalSemua();
+            }
+
+            tbody.appendChild(tr);
+            updateBaris(); // Panggil sekali untuk mengisi subtotal awal & sinkron text print
+
+            // 4. Reset Area Input atas
             currentBarang = null;
             document.getElementById('barcodeInput').value = '';
             document.getElementById('namaBarangPreview').innerText = '';
@@ -302,44 +321,18 @@ tr.innerHTML = `
             document.getElementById('barcodeInput').focus();
         }
 
-        // 5. Fitur Hapus
-        function hapusBaris(btn) {
-            let tr = btn.closest('tr');
-            let subtotal = parseInt(tr.dataset.subtotal);
-            totalTransaksi -= subtotal;
-            tr.remove();
-            updateTotal();
-        }
-
-        function updateTotal() {
-            document.getElementById('totalAkhir').innerText = totalTransaksi.toLocaleString('id-ID');
-        }
-
-        function updateRowTotal(input, fixedPrice) {
-            let tr = input.closest('tr');
-            let qtyInput = tr.cells[0].querySelector('input').value;
-            let hargaInput = tr.cells[2].querySelector('input').value;
+        // Fungsi Global untuk merekap semua subtotal menjadi Grand Total
+        function hitungTotalSemua() {
+            let grandTotal = 0;
+            let rows = document.querySelectorAll('.baris-barang');
             
-            let newQty = parseFloat(qtyInput) || 0;
-            let newHarga = parseInt(hargaInput) || 0;
-            let newSubtotal = newQty * newHarga;
-        
-            // Update tampilan subtotal di baris tersebut
-            tr.querySelector('.subtotal-text').innerText = newSubtotal.toLocaleString('id-ID');
-            tr.dataset.subtotal = newSubtotal;
-        
-            // Hitung ulang total keseluruhan
-            recalculateGrandTotal();
-        }
-        
-        function recalculateGrandTotal() {
-            let allRows = document.querySelectorAll('.baris-barang');
-            let total = 0;
-            allRows.forEach(row => {
-                total += parseInt(row.dataset.subtotal) || 0;
+            rows.forEach(tr => {
+                let rQty = parseInt(tr.querySelector('.row-qty').value) || 0;
+                let rHarga = parseInt(tr.querySelector('.row-harga').value) || 0;
+                grandTotal += (rQty * rHarga);
             });
-            totalTransaksi = total;
-            document.getElementById('totalAkhir').innerText = total.toLocaleString('id-ID');
+
+            document.getElementById('totalAkhir').innerText = grandTotal.toLocaleString('id-ID');
         }
     </script>
 </body>
