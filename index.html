@@ -40,7 +40,7 @@
                     </select>
                 </div>
                 <div class="col-span-2">
-                    <label class="block text-sm font-semibold mb-1">4. Harga (Bisa Diubah Manual)</label>
+                    <label class="block text-sm font-semibold mb-1">4. Harga</label>
                     <div class="flex flex-col gap-2">
                         <select id="hargaSelect" class="w-full border rounded p-2 focus:ring-2 focus:ring-blue-500 bg-gray-100 text-sm" disabled>
                             <option value="">Scan barang dulu...</option>
@@ -256,8 +256,11 @@
 
             tr.innerHTML = `
                 <td class="py-2 text-sm">${qty} ${unit}</td>
-                <td class="py-2 text-sm">${currentBarang.nama}</td>
-                <td class="py-2 text-sm">${hargaSatuan.toLocaleString('id-ID')} <br><span class="text-xs text-gray-500">${teksHarga}</span></td>
+                <td class="py-2 text-sm">
+                    <input type="text" value="${currentBarang.nama}" 
+                           class="w-full bg-transparent focus:outline-none border-b border-transparent hover:border-gray-300 focus:border-blue-500 print:border-none">
+                </td>
+                <td class="py-2 text-sm">${hargaSatuan.toLocaleString('id-ID')}</td>
                 <td class="py-2 text-sm font-medium">Rp ${subtotal.toLocaleString('id-ID')}</td>
                 <td class="py-2 text-center print:hidden">
                     <button onclick="hapusBaris(this)" class="text-red-500 hover:text-red-700 font-bold">✕</button>
