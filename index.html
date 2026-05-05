@@ -216,23 +216,19 @@
 
         document.getElementById('btnTambah').addEventListener('click', tambahkanKeList);
 
-        // 3. Masukkan ke List Akhir (Semua field jadi editable)
+// 3. Masukkan ke List Akhir (Semua field jadi editable)
         function tambahkanKeList() {
             if (!currentBarang) return;
 
             let qty = parseInt(document.getElementById('qtyInput').value) || 1;
             let unit = document.getElementById('unitInput').value;
             let hargaSatuan = parseInt(document.getElementById('customHargaInput').value) || 0;
-            
-            let hargaDropdown = parseInt(document.getElementById('hargaSelect').value);
-            let teksHarga = document.getElementById('hargaSelect').options[document.getElementById('hargaSelect').selectedIndex].text;
-            if (hargaSatuan !== hargaDropdown) teksHarga = "Harga Custom";
 
             let tbody = document.getElementById('listBarang');
             let tr = document.createElement('tr');
             tr.className = "border-b border-gray-200 baris-barang";
 
-            // Render baris dengan input field di dalamnya
+            // Render baris dengan input field di dalamnya (Teks penanda harga sudah dihapus)
             tr.innerHTML = `
                 <td class="py-2 align-top text-sm">
                     <div class="print:hidden flex gap-1 items-center">
@@ -252,7 +248,6 @@
                 <td class="py-2 align-top pr-2">
                     <div class="print:hidden">
                         <input type="number" class="w-full border rounded p-1 text-sm row-harga focus:ring-2 focus:ring-blue-400" value="${hargaSatuan}">
-                        <div class="text-xs text-gray-500 mt-1">${teksHarga}</div>
                     </div>
                     <div class="hidden print:block print-harga text-sm mt-1"></div>
                 </td>
