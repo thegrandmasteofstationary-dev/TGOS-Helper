@@ -53,9 +53,7 @@
                     <label class="block text-sm font-semibold mb-1">1. Scan Barcode / Ketik Nama Barang</label>
                     <div class="relative">
                         <input type="text" id="barcodeInput" autocomplete="off" class="w-full border-2 border-blue-400 rounded p-3 text-lg focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all" placeholder="Menunggu database dimuat..." disabled autofocus>
-                        
-                        <ul id="searchDropdown" class="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg hidden max-h-60 overflow-y-auto mt-1 text-sm">
-                            </ul>
+                        <ul id="searchDropdown" class="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg hidden max-h-60 overflow-y-auto mt-1 text-sm"></ul>
                     </div>
                     <p id="namaBarangPreview" class="text-sm text-green-600 font-bold mt-2 h-5"></p>
                 </div>
@@ -141,12 +139,12 @@
     <script>
         document.getElementById('displayTanggal').innerText = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
-        let database = {}; // Menyimpan dictionary berdasarkan barcode
-        let listProdukUnik = []; // Menyimpan array nama barang untuk fitur Search
+        let database = {}; 
+        let listProdukUnik = []; 
         let currentBarang = null; 
 
         // ==============================================
-        // GANTI URL GAMBAR WATERMARK KAMU DI SINI
+        // URL GAMBAR WATERMARK
         // ==============================================
         const URL_WATERMARK = "https://via.placeholder.com/400x400?text=Logo+Toko+Faster"; 
         // ==============================================
@@ -172,13 +170,13 @@
                         
                         let baseData = { nama, g1: hargaG1, g2: hargaG2, e1: hargaE1, e2: hargaE2 };
                         
-                        // Isi kamus Barcode
-                        if (kodeJamak !== "") database[kodeJamak] = baseData;
-                        if (kodeTunggal !== "") database[kodeTunggal] = baseData;
+                        // Isi database, tambahkan penanda tipe untuk logika sorting dropdown harga
+                        if (kodeJamak !== "") database[kodeJamak] = { ...baseData, tipeBarcode: 'jamak' };
+                        if (kodeTunggal !== "") database[kodeTunggal] = { ...baseData, tipeBarcode: 'tunggal' };
                         
-                        // Isi array untuk fitur pencarian (hindari duplikat nama)
                         if (!listProdukUnik.some(p => p.nama === nama)) {
-                            listProdukUnik.push(baseData);
+                            // Untuk pencarian manual nama, set default tipe sebagai 'tunggal'
+                            listProdukUnik.push({ ...baseData, tipeBarcode: 'tunggal' });
                         }
                     }
                 }
@@ -200,18 +198,15 @@
         const inputHibrida = document.getElementById('barcodeInput');
         const dropdownSearch = document.getElementById('searchDropdown');
 
-        // Saat ngetik biasa (Search Name)
         inputHibrida.addEventListener('input', function() {
             const keyword = this.value.toLowerCase().trim();
             dropdownSearch.innerHTML = '';
             
-            // Tampilkan dropdown kalau udah ngetik minimal 2 huruf
             if (keyword.length < 2) {
                 dropdownSearch.classList.add('hidden');
                 return;
             }
             
-            // Filter barang yang namanya mengandung keyword
             const hasilSearch = listProdukUnik.filter(p => p.nama.toLowerCase().includes(keyword));
             
             if (hasilSearch.length > 0) {
@@ -220,7 +215,6 @@
                     const li = document.createElement('li');
                     li.className = 'px-4 py-2 hover:bg-blue-100 cursor-pointer border-b border-gray-100 last:border-0';
                     li.textContent = prod.nama;
-                    // Kalau di-klik, jalankan fungsi aktivasi UI
                     li.onclick = () => aktifkanUIBarang(prod);
                     dropdownSearch.appendChild(li);
                 });
@@ -229,22 +223,19 @@
             }
         });
 
-        // Sembunyikan dropdown kalau ngeklik area lain
         document.addEventListener('click', function(e) {
             if (e.target !== inputHibrida && e.target !== dropdownSearch) {
                 dropdownSearch.classList.add('hidden');
             }
         });
 
-        // Saat tombol Enter dipencet (Fungsi Scanner)
         inputHibrida.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault(); 
-                dropdownSearch.classList.add('hidden'); // Tutup dropdown
+                dropdownSearch.classList.add('hidden');
                 let barcode = this.value.trim();
                 if (barcode === "") return;
                 
-                // Cek ke kamus database barcode
                 if (database[barcode]) {
                     aktifkanUIBarang(database[barcode]);
                 } else {
@@ -254,11 +245,12 @@
             }
         });
 
-        // Fungsi bersama untuk mengaktifkan UI form setelah barang terpilih (lewat Scan atau Search)
+        // =======================================================
+        // AKTIVASI UI BARANG & LOGIKA SORTING DROPDOWN HARGA
+        // =======================================================
         function aktifkanUIBarang(dataBarang) {
             currentBarang = dataBarang;
             
-            // Ganti isi input text jadi nama barang biar rapi
             inputHibrida.value = currentBarang.nama;
             dropdownSearch.classList.add('hidden');
 
@@ -275,12 +267,24 @@
             customHargaInput.disabled = false;
             document.getElementById('btnTambah').disabled = false;
 
-            hargaSelect.innerHTML = `
+            // HTML Blok Eceran & Grosir
+            let eceranHTML = `
                 <option value="${currentBarang.e2}">Eceran 2 (Rp ${currentBarang.e2.toLocaleString('id-ID')})</option>
                 <option value="${currentBarang.e1}">Eceran 1 (Rp ${currentBarang.e1.toLocaleString('id-ID')})</option>
+            `;
+            let grosirHTML = `
                 <option value="${currentBarang.g2}">Grosir 2 (Rp ${currentBarang.g2.toLocaleString('id-ID')})</option>
                 <option value="${currentBarang.g1}">Grosir 1 (Rp ${currentBarang.g1.toLocaleString('id-ID')})</option>
             `;
+
+            // Tentukan susunan berdasarkan tipe barcode yang nge-trigger
+            if (currentBarang.tipeBarcode === 'jamak') {
+                // Jamak discan -> Grosir naik ke atas (Grosir 2 jadi default)
+                hargaSelect.innerHTML = grosirHTML + eceranHTML;
+            } else {
+                // Tunggal discan / Ketik manual -> Eceran naik ke atas (Eceran 2 jadi default)
+                hargaSelect.innerHTML = eceranHTML + grosirHTML;
+            }
             
             customHargaInput.value = hargaSelect.value;
             hargaSelect.onchange = function() { customHargaInput.value = this.value; };
@@ -288,9 +292,6 @@
             document.getElementById('qtyInput').select();
         }
 
-        // =======================================================
-        // TAMBAHKAN KE LIST (ENTER)
-        // =======================================================
         ['qtyInput', 'unitInput', 'hargaSelect', 'customHargaInput'].forEach(id => {
             document.getElementById(id).addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') { e.preventDefault(); prosesTambahKeList(); }
@@ -412,10 +413,6 @@
             document.getElementById('totalAkhir').innerText = grandTotal.toLocaleString('id-ID');
         }
 
-        // ====================================================================
-        // ENGINE PENCETAKAN: DUPLIKAT JIKA <= 25, BELAH/SAMBUNG JIKA > 25
-        // DITAMBAH WATERMARK DI SETIAP KOLOM
-        // ====================================================================
         function cetakStruk() {
             let printData = [];
             document.querySelectorAll('.baris-barang').forEach((tr, index) => {
