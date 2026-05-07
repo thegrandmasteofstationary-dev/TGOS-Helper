@@ -6,38 +6,33 @@
     <title>Digital Receipt POS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* ========================================================
-           PENGATURAN KHUSUS PRINTER (FIX 25 BARIS PER KOLOM)
-           ======================================================== */
         @media print {
-            /* Margin diperkecil jadi 8mm agar area vertikal lebih lega */
-            @page { size: A4 landscape; margin: 8mm; } 
+            @page { size: A4 landscape; margin: 10mm; } 
             body { background-color: white; color: black; -webkit-print-color-adjust: exact; }
             
             .screen-area { display: none !important; }
             #printLayout { display: block !important; width: 100%; }
             
-            .print-page { width: 100%; page-break-after: always; page-break-inside: avoid; }
+            .print-page { width: 100%; height: 100%; page-break-after: always; page-break-inside: avoid; display: flex; gap: 4%; }
             .print-page:last-child { page-break-after: auto; }
             
-            /* Font diperkecil ke 10px dan padding dirapatkan agar 25 baris muat */
-            table { border-collapse: collapse; width: 100%; font-size: 10px; }
-            th, td { padding: 2px 4px !important; line-height: 1.1 !important; }
+            /* Font dikembalikan ke ukuran normal (12px/11px) agar tidak kekecilan */
+            table { border-collapse: collapse; width: 100%; font-size: 11px; }
+            th, td { padding: 4px 6px !important; line-height: 1.2 !important; border-bottom: 1px solid #ddd; }
+            th { border-bottom: 2px solid black; }
             
-            /* Jarak header dipangkas */
-            h2 { margin-bottom: 2px !important; font-size: 16px !important; }
-            .header-print { margin-bottom: 8px !important; }
-            .total-print { margin-top: 8px !important; }
+            h2 { margin-bottom: 4px !important; font-size: 18px !important; }
+            
+            /* Garis potong tengah */
+            .col-kanan { border-left: 1px dashed #999; padding-left: 4%; }
         }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
 
-    <!-- AREA LAYAR (Hanya tampil di monitor) -->
     <div class="screen-area p-4 md:p-8 flex justify-center">
         <div class="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             
-            <!-- KIRI: AREA SCANNER -->
             <div class="lg:col-span-4 bg-white p-6 rounded-lg shadow-md sticky top-4 flex flex-col gap-4">
                 <h2 class="text-xl font-bold border-b pb-2">Kasir / POS Scanner</h2>
                 
@@ -76,7 +71,6 @@
                 </button>
             </div>
 
-            <!-- KANAN: AREA STRUK LAYAR -->
             <div class="lg:col-span-8 bg-white p-6 lg:p-8 rounded-lg shadow-md flex flex-col h-full">
                 <div class="mb-6">
                     <p><strong>Tanggal:</strong> <span id="displayTanggal"></span></p>
@@ -107,8 +101,7 @@
                         </tr>
                     </thead>
                     <tbody id="listBarang">
-                        <!-- Data barang layar masuk sini -->
-                    </tbody>
+                        </tbody>
                 </table>
 
                 <div class="border-t-2 border-gray-400 pt-4 flex flex-col items-end mt-auto">
@@ -125,7 +118,6 @@
         </div>
     </div>
 
-    <!-- AREA KHUSUS PRINT -->
     <div id="printLayout" class="hidden print:block w-full"></div>
 
     <script>
@@ -151,9 +143,12 @@
                         let hargaG2 = parseInt(cols[5].replace(/['"\.]+/g, '').trim()) || 0;
                         let hargaE1 = parseInt(cols[6].replace(/['"\.]+/g, '').trim()) || 0;
                         let hargaE2 = parseInt(cols[7].replace(/['"\.]+/g, '').trim()) || 0;
+                        
                         let baseData = { nama, g1: hargaG1, g2: hargaG2, e1: hargaE1, e2: hargaE2 };
-                        if (kodeJamak !== "") database[kodeJamak] = { ...baseData, tipe: 'jamak' };
-                        if (kodeTunggal !== "") database[kodeTunggal] = { ...baseData, tipe: 'tunggal' };
+                        
+                        // Masukkan barcode ke database (tanpa pandang bulu tipe lagi)
+                        if (kodeJamak !== "") database[kodeJamak] = baseData;
+                        if (kodeTunggal !== "") database[kodeTunggal] = baseData;
                     }
                 }
                 let inputScanner = document.getElementById('barcodeInput');
@@ -161,7 +156,6 @@
                 inputScanner.placeholder = "Siap! Scan barcode di sini...";
                 inputScanner.focus();
             } catch (error) {
-                console.error("Error Detail:", error);
                 document.getElementById('namaBarangPreview').innerText = "Gagal memuat database!";
                 document.getElementById('namaBarangPreview').classList.replace('text-green-600', 'text-red-600');
             }
@@ -173,30 +167,30 @@
                 e.preventDefault(); 
                 let barcode = this.value.trim();
                 if (barcode === "") return;
+                
                 if (database[barcode]) {
                     currentBarang = database[barcode];
                     document.getElementById('namaBarangPreview').innerText = "Terdeteksi: " + currentBarang.nama;
                     document.getElementById('namaBarangPreview').classList.replace('text-red-600', 'text-green-600');
                     document.getElementById('qtyInput').disabled = false;
                     document.getElementById('unitInput').disabled = false;
+                    
                     let hargaSelect = document.getElementById('hargaSelect');
                     let customHargaInput = document.getElementById('customHargaInput');
+                    
                     hargaSelect.disabled = false;
                     hargaSelect.classList.remove('bg-gray-100');
                     customHargaInput.disabled = false;
                     document.getElementById('btnTambah').disabled = false;
 
-                    if (currentBarang.tipe === 'tunggal') {
-                        hargaSelect.innerHTML = `
-                            <option value="${currentBarang.e2}">Eceran 2 (Rp ${currentBarang.e2.toLocaleString('id-ID')})</option>
-                            <option value="${currentBarang.e1}">Eceran 1 (Rp ${currentBarang.e1.toLocaleString('id-ID')})</option>
-                        `;
-                    } else {
-                        hargaSelect.innerHTML = `
-                            <option value="${currentBarang.g2}">Grosir 2 (Rp ${currentBarang.g2.toLocaleString('id-ID')})</option>
-                            <option value="${currentBarang.g1}">Grosir 1 (Rp ${currentBarang.g1.toLocaleString('id-ID')})</option>
-                        `;
-                    }
+                    // SEMUA HARGA DITAMPILKAN
+                    hargaSelect.innerHTML = `
+                        <option value="${currentBarang.e2}">Eceran 2 (Rp ${currentBarang.e2.toLocaleString('id-ID')})</option>
+                        <option value="${currentBarang.e1}">Eceran 1 (Rp ${currentBarang.e1.toLocaleString('id-ID')})</option>
+                        <option value="${currentBarang.g2}">Grosir 2 (Rp ${currentBarang.g2.toLocaleString('id-ID')})</option>
+                        <option value="${currentBarang.g1}">Grosir 1 (Rp ${currentBarang.g1.toLocaleString('id-ID')})</option>
+                    `;
+                    
                     customHargaInput.value = hargaSelect.value;
                     hargaSelect.onchange = function() { customHargaInput.value = this.value; };
                     document.getElementById('qtyInput').focus();
@@ -327,7 +321,7 @@
         }
 
         // ====================================================================
-        // ENGINE PENCETAKAN KHUSUS (A4 Landscape, Fix Belah 2, Max 25/Kolom)
+        // ENGINE PENCETAKAN: DUPLIKAT JIKA <= 25, BELAH/SAMBUNG JIKA > 25
         // ====================================================================
         function cetakStruk() {
             let printData = [];
@@ -347,69 +341,99 @@
 
             let html = '';
             let totalItems = printData.length;
-            let itemsPerPage = 50; // 1 halaman A4 = max 50 (25 Kiri, 25 Kanan)
+            let maxPerColumn = 25; 
 
             if (totalItems === 0) {
                 html = '<p style="text-align:center; padding-top:40px; font-size: 20px;">Struk kosong.</p>';
             }
 
-            for (let i = 0; i < totalItems; i += itemsPerPage) {
-                let pageItems = printData.slice(i, i + itemsPerPage);
-                // DIBELAH TEPAT DI ANGKA 25!
-                let col1 = pageItems.slice(0, 25);
-                let col2 = pageItems.slice(25, 50);
-
-                html += `<div class="print-page">`;
-                
-                // Header (Toko Faster, Tanggal, dll)
-                html += `
-                <div class="header-print">
+            // --- BAGIAN HEADER & TOTAL YANG BISA DIPAKAI BERULANG ---
+            let headerHTML = `
+                <div class="mb-3">
                     <h2 class="font-bold italic">Toko Faster</h2>
-                    <table class="text-xs" style="width: auto !important; font-size: 10px;">
+                    <table style="width: auto !important; font-size: 11px;">
                         <tr><td class="font-bold !pr-2 !pb-0 !pl-0 !pt-0">Tanggal</td><td class="!p-0">: ${tanggal}</td></tr>
                         <tr><td class="font-bold !pr-2 !pb-0 !pl-0 !pt-0">Tuan Toko</td><td class="!p-0">: ${tuanToko}</td></tr>
                         <tr><td class="font-bold !pr-2 !pb-0 !pl-0 !pt-0">Catatan</td><td class="!p-0">: ${catatan}</td></tr>
                     </table>
                 </div>`;
 
-                // Wrapper 2 Kolom menggunakan Flexbox
-                html += `<div style="display: flex; gap: 2rem; width: 100%; align-items: start;">`;
-                
-                // Render Kolom 1 (Kiri - max 25 baris)
-                html += `<div style="width: 50%;">${renderPrintTable(col1)}</div>`;
-                
-                // Render Kolom 2 (Kanan - sisa sampai 50 baris)
-                html += `<div style="width: 50%;">${col2.length > 0 ? renderPrintTable(col2) : ''}</div>`;
-                
-                html += `</div>`; // Tutup Flexbox
+            let totalHTML = `
+                <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                    <div style="border-top: 2px solid black; padding-top: 4px; padding-left: 16px; text-align: right;">
+                        <h3 style="font-size: 14px; font-weight: bold; margin:0;">Total: Rp ${grandTotal}</h3>
+                    </div>
+                </div>`;
 
-                // Total Harga (Nempel di halaman paling akhir)
-                if (i + itemsPerPage >= totalItems) {
-                    html += `
-                    <div class="total-print" style="display: flex; justify-content: flex-end;">
-                        <div style="border-top: 2px solid black; padding-top: 4px; padding-left: 16px; padding-right: 16px; text-align: right;">
-                            <h3 style="font-size: 14px; font-weight: bold; margin:0;">Total: Rp ${grandTotal}</h3>
-                        </div>
-                    </div>`;
+
+            if (totalItems <= maxPerColumn && totalItems > 0) {
+                // ==========================================
+                // SKENARIO 1: <= 25 BARIS (RANGKAP / DOUBLE)
+                // ==========================================
+                let tableHTML = renderPrintTable(printData);
+                
+                // Susun 1 layout utuh
+                let fullReceipt = `
+                    <div style="display:flex; flex-direction:column; height:100%;">
+                        ${headerHTML}
+                        <div style="flex-grow:1;">${tableHTML}</div>
+                        ${totalHTML}
+                    </div>
+                `;
+
+                // Render 2 kali (kiri dan kanan)
+                html = `
+                <div class="print-page">
+                    <div style="width: 48%;">${fullReceipt}</div>
+                    <div class="col-kanan" style="width: 48%;">${fullReceipt}</div>
+                </div>`;
+
+            } else if (totalItems > maxPerColumn) {
+                // ==========================================
+                // SKENARIO 2: > 25 BARIS (SAMBUNG / SPLIT)
+                // ==========================================
+                for (let i = 0; i < totalItems; i += 50) { // 50 items per halaman utuh
+                    let chunk = printData.slice(i, i + 50);
+                    let col1 = chunk.slice(0, 25);
+                    let col2 = chunk.slice(25, 50);
+
+                    let isFirstPage = (i === 0);
+                    let isLastPage = (i + 50 >= totalItems);
+
+                    html += `<div class="print-page">`;
+                    
+                    // -- KOLOM KIRI --
+                    html += `<div style="width: 48%; display:flex; flex-direction:column;">`;
+                    if (isFirstPage) html += headerHTML; // Header di kiri atas
+                    html += `<div style="flex-grow:1;">${renderPrintTable(col1)}</div>`;
+                    if (isLastPage && col2.length === 0) html += totalHTML; // Kalau pas abis di kolom kiri
+                    html += `</div>`;
+                    
+                    // -- KOLOM KANAN --
+                    html += `<div class="col-kanan" style="width: 48%; display:flex; flex-direction:column;">`;
+                    if (col2.length > 0) {
+                        html += `<div style="flex-grow:1;">${renderPrintTable(col2)}</div>`;
+                        if (isLastPage) html += totalHTML; // Kalau abisnya di kolom kanan
+                    }
+                    html += `</div>`;
+                    
+                    html += `</div>`; // Tutup Halaman
                 }
-
-                html += `</div>`; // Tutup Print Page
             }
 
             document.getElementById('printLayout').innerHTML = html;
             window.print();
         }
 
-        // Bantuan merakit tabel khusus print
         function renderPrintTable(items) {
             if(items.length === 0) return '';
             let t = `
             <table style="width: 100%; text-align: left;">
                 <thead>
-                    <tr style="border-bottom: 2px solid black;">
+                    <tr>
                         <th style="width: 5%; font-weight: bold;">No</th>
-                        <th style="width: 20%; font-weight: bold;">Banyaknya</th>
-                        <th style="width: 40%; font-weight: bold;">Nama Barang</th>
+                        <th style="width: 18%; font-weight: bold;">Qty</th>
+                        <th style="width: 42%; font-weight: bold;">Nama Barang</th>
                         <th style="width: 15%; font-weight: bold; text-align: right;">Harga</th>
                         <th style="width: 20%; font-weight: bold; text-align: right;">Jumlah</th>
                     </tr>
@@ -417,7 +441,7 @@
                 <tbody>`;
             items.forEach(item => {
                 t += `
-                <tr style="border-bottom: 1px solid #ccc;">
+                <tr>
                     <td style="vertical-align: top;">${item.no}</td>
                     <td style="vertical-align: top;">${item.qty} ${item.unit}</td>
                     <td style="vertical-align: top; word-break: break-word; padding-right: 4px;">${item.nama}</td>
