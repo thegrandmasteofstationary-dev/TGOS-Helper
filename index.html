@@ -170,12 +170,10 @@
                         
                         let baseData = { nama, g1: hargaG1, g2: hargaG2, e1: hargaE1, e2: hargaE2 };
                         
-                        // Isi database, tambahkan penanda tipe untuk logika sorting dropdown harga
                         if (kodeJamak !== "") database[kodeJamak] = { ...baseData, tipeBarcode: 'jamak' };
                         if (kodeTunggal !== "") database[kodeTunggal] = { ...baseData, tipeBarcode: 'tunggal' };
                         
                         if (!listProdukUnik.some(p => p.nama === nama)) {
-                            // Untuk pencarian manual nama, set default tipe sebagai 'tunggal'
                             listProdukUnik.push({ ...baseData, tipeBarcode: 'tunggal' });
                         }
                     }
@@ -267,7 +265,6 @@
             customHargaInput.disabled = false;
             document.getElementById('btnTambah').disabled = false;
 
-            // HTML Blok Eceran & Grosir
             let eceranHTML = `
                 <option value="${currentBarang.e2}">Eceran 2 (Rp ${currentBarang.e2.toLocaleString('id-ID')})</option>
                 <option value="${currentBarang.e1}">Eceran 1 (Rp ${currentBarang.e1.toLocaleString('id-ID')})</option>
@@ -277,12 +274,9 @@
                 <option value="${currentBarang.g1}">Grosir 1 (Rp ${currentBarang.g1.toLocaleString('id-ID')})</option>
             `;
 
-            // Tentukan susunan berdasarkan tipe barcode yang nge-trigger
             if (currentBarang.tipeBarcode === 'jamak') {
-                // Jamak discan -> Grosir naik ke atas (Grosir 2 jadi default)
                 hargaSelect.innerHTML = grosirHTML + eceranHTML;
             } else {
-                // Tunggal discan / Ketik manual -> Eceran naik ke atas (Eceran 2 jadi default)
                 hargaSelect.innerHTML = eceranHTML + grosirHTML;
             }
             
@@ -437,7 +431,7 @@
                 html = '<p style="text-align:center; padding-top:40px; font-size: 20px;">Struk kosong.</p>';
             }
 
-            let watermarkHTML = URL_WATERMARK ? `<img src="${https://i.pinimg.com/736x/28/54/26/285426b2edfd59295099c3618c3bb4f1.jpg}" class="watermark-img" alt="Watermark">` : '';
+            let watermarkHTML = URL_WATERMARK ? `<img src="${URL_WATERMARK}" class="watermark-img" alt="Watermark">` : '';
 
             let headerHTML = `
                 <div class="mb-3">
