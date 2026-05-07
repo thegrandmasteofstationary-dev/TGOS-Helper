@@ -6,6 +6,9 @@
     <title>Digital Receipt POS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* ========================================================
+           PENGATURAN KHUSUS PRINTER
+           ======================================================== */
         @media print {
             @page { size: A4 landscape; margin: 10mm; } 
             body { background-color: white; color: black; -webkit-print-color-adjust: exact; }
@@ -16,15 +19,25 @@
             .print-page { width: 100%; height: 100%; page-break-after: always; page-break-inside: avoid; display: flex; gap: 4%; }
             .print-page:last-child { page-break-after: auto; }
             
-            /* Font dikembalikan ke ukuran normal (12px/11px) agar tidak kekecilan */
             table { border-collapse: collapse; width: 100%; font-size: 11px; }
             th, td { padding: 4px 6px !important; line-height: 1.2 !important; border-bottom: 1px solid #ddd; }
             th { border-bottom: 2px solid black; }
             
             h2 { margin-bottom: 4px !important; font-size: 18px !important; }
             
-            /* Garis potong tengah */
             .col-kanan { border-left: 1px dashed #999; padding-left: 4%; }
+
+            /* WATERMARK */
+            .watermark-img {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 70%; 
+                opacity: 0.15; 
+                z-index: -1;
+                pointer-events: none;
+            }
         }
     </style>
 </head>
@@ -37,8 +50,13 @@
                 <h2 class="text-xl font-bold border-b pb-2">Kasir / POS Scanner</h2>
                 
                 <div>
-                    <label class="block text-sm font-semibold mb-1">1. Scan Barcode</label>
-                    <input type="text" id="barcodeInput" class="w-full border-2 border-blue-400 rounded p-3 text-lg focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all" placeholder="Menunggu database dimuat..." disabled autofocus>
+                    <label class="block text-sm font-semibold mb-1">1. Scan Barcode / Ketik Nama Barang</label>
+                    <div class="relative">
+                        <input type="text" id="barcodeInput" autocomplete="off" class="w-full border-2 border-blue-400 rounded p-3 text-lg focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all" placeholder="Menunggu database dimuat..." disabled autofocus>
+                        
+                        <ul id="searchDropdown" class="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg hidden max-h-60 overflow-y-auto mt-1 text-sm">
+                            </ul>
+                    </div>
                     <p id="namaBarangPreview" class="text-sm text-green-600 font-bold mt-2 h-5"></p>
                 </div>
 
@@ -123,8 +141,15 @@
     <script>
         document.getElementById('displayTanggal').innerText = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
-        let database = {};
+        let database = {}; // Menyimpan dictionary berdasarkan barcode
+        let listProdukUnik = []; // Menyimpan array nama barang untuk fitur Search
         let currentBarang = null; 
+
+        // ==============================================
+        // GANTI URL GAMBAR WATERMARK KAMU DI SINI
+        // ==============================================
+        const URL_WATERMARK = "https://via.placeholder.com/400x400?text=Logo+Toko+Faster"; 
+        // ==============================================
 
         async function fetchDatabase() {
             const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQqFjmQEMLJl-UhiBkV6hDmVePKMGhWgUkwqPWiUOcv6YeBjX9-mw75au_WztJIkcbwr0D2hcDAGZrw/pub?gid=1746227063&single=true&output=csv';
@@ -133,6 +158,7 @@
                 if (!response.ok) throw new Error("Gagal mengambil data");
                 const csvText = await response.text();
                 const rows = csvText.split('\n');
+                
                 for (let i = 1; i < rows.length; i++) {
                     const cols = rows[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                     if (cols.length >= 8) { 
@@ -146,14 +172,20 @@
                         
                         let baseData = { nama, g1: hargaG1, g2: hargaG2, e1: hargaE1, e2: hargaE2 };
                         
-                        // Masukkan barcode ke database (tanpa pandang bulu tipe lagi)
+                        // Isi kamus Barcode
                         if (kodeJamak !== "") database[kodeJamak] = baseData;
                         if (kodeTunggal !== "") database[kodeTunggal] = baseData;
+                        
+                        // Isi array untuk fitur pencarian (hindari duplikat nama)
+                        if (!listProdukUnik.some(p => p.nama === nama)) {
+                            listProdukUnik.push(baseData);
+                        }
                     }
                 }
+                
                 let inputScanner = document.getElementById('barcodeInput');
                 inputScanner.disabled = false;
-                inputScanner.placeholder = "Siap! Scan barcode di sini...";
+                inputScanner.placeholder = "Siap! Scan / ketik nama...";
                 inputScanner.focus();
             } catch (error) {
                 document.getElementById('namaBarangPreview').innerText = "Gagal memuat database!";
@@ -162,47 +194,103 @@
         }
         window.onload = fetchDatabase;
 
-        document.getElementById('barcodeInput').addEventListener('keypress', function(e) {
+        // =======================================================
+        // LOGIKA AUTOCOMPLETE SEARCH & SCANNER
+        // =======================================================
+        const inputHibrida = document.getElementById('barcodeInput');
+        const dropdownSearch = document.getElementById('searchDropdown');
+
+        // Saat ngetik biasa (Search Name)
+        inputHibrida.addEventListener('input', function() {
+            const keyword = this.value.toLowerCase().trim();
+            dropdownSearch.innerHTML = '';
+            
+            // Tampilkan dropdown kalau udah ngetik minimal 2 huruf
+            if (keyword.length < 2) {
+                dropdownSearch.classList.add('hidden');
+                return;
+            }
+            
+            // Filter barang yang namanya mengandung keyword
+            const hasilSearch = listProdukUnik.filter(p => p.nama.toLowerCase().includes(keyword));
+            
+            if (hasilSearch.length > 0) {
+                dropdownSearch.classList.remove('hidden');
+                hasilSearch.forEach(prod => {
+                    const li = document.createElement('li');
+                    li.className = 'px-4 py-2 hover:bg-blue-100 cursor-pointer border-b border-gray-100 last:border-0';
+                    li.textContent = prod.nama;
+                    // Kalau di-klik, jalankan fungsi aktivasi UI
+                    li.onclick = () => aktifkanUIBarang(prod);
+                    dropdownSearch.appendChild(li);
+                });
+            } else {
+                dropdownSearch.classList.add('hidden');
+            }
+        });
+
+        // Sembunyikan dropdown kalau ngeklik area lain
+        document.addEventListener('click', function(e) {
+            if (e.target !== inputHibrida && e.target !== dropdownSearch) {
+                dropdownSearch.classList.add('hidden');
+            }
+        });
+
+        // Saat tombol Enter dipencet (Fungsi Scanner)
+        inputHibrida.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault(); 
+                dropdownSearch.classList.add('hidden'); // Tutup dropdown
                 let barcode = this.value.trim();
                 if (barcode === "") return;
                 
+                // Cek ke kamus database barcode
                 if (database[barcode]) {
-                    currentBarang = database[barcode];
-                    document.getElementById('namaBarangPreview').innerText = "Terdeteksi: " + currentBarang.nama;
-                    document.getElementById('namaBarangPreview').classList.replace('text-red-600', 'text-green-600');
-                    document.getElementById('qtyInput').disabled = false;
-                    document.getElementById('unitInput').disabled = false;
-                    
-                    let hargaSelect = document.getElementById('hargaSelect');
-                    let customHargaInput = document.getElementById('customHargaInput');
-                    
-                    hargaSelect.disabled = false;
-                    hargaSelect.classList.remove('bg-gray-100');
-                    customHargaInput.disabled = false;
-                    document.getElementById('btnTambah').disabled = false;
-
-                    // SEMUA HARGA DITAMPILKAN
-                    hargaSelect.innerHTML = `
-                        <option value="${currentBarang.e2}">Eceran 2 (Rp ${currentBarang.e2.toLocaleString('id-ID')})</option>
-                        <option value="${currentBarang.e1}">Eceran 1 (Rp ${currentBarang.e1.toLocaleString('id-ID')})</option>
-                        <option value="${currentBarang.g2}">Grosir 2 (Rp ${currentBarang.g2.toLocaleString('id-ID')})</option>
-                        <option value="${currentBarang.g1}">Grosir 1 (Rp ${currentBarang.g1.toLocaleString('id-ID')})</option>
-                    `;
-                    
-                    customHargaInput.value = hargaSelect.value;
-                    hargaSelect.onchange = function() { customHargaInput.value = this.value; };
-                    document.getElementById('qtyInput').focus();
-                    document.getElementById('qtyInput').select();
+                    aktifkanUIBarang(database[barcode]);
                 } else {
                     document.getElementById('namaBarangPreview').innerText = "❌ Barcode tidak ditemukan!";
                     document.getElementById('namaBarangPreview').classList.replace('text-green-600', 'text-red-600');
-                    this.value = '';
                 }
             }
         });
 
+        // Fungsi bersama untuk mengaktifkan UI form setelah barang terpilih (lewat Scan atau Search)
+        function aktifkanUIBarang(dataBarang) {
+            currentBarang = dataBarang;
+            
+            // Ganti isi input text jadi nama barang biar rapi
+            inputHibrida.value = currentBarang.nama;
+            dropdownSearch.classList.add('hidden');
+
+            document.getElementById('namaBarangPreview').innerText = "Terdeteksi: " + currentBarang.nama;
+            document.getElementById('namaBarangPreview').classList.replace('text-red-600', 'text-green-600');
+            document.getElementById('qtyInput').disabled = false;
+            document.getElementById('unitInput').disabled = false;
+            
+            let hargaSelect = document.getElementById('hargaSelect');
+            let customHargaInput = document.getElementById('customHargaInput');
+            
+            hargaSelect.disabled = false;
+            hargaSelect.classList.remove('bg-gray-100');
+            customHargaInput.disabled = false;
+            document.getElementById('btnTambah').disabled = false;
+
+            hargaSelect.innerHTML = `
+                <option value="${currentBarang.e2}">Eceran 2 (Rp ${currentBarang.e2.toLocaleString('id-ID')})</option>
+                <option value="${currentBarang.e1}">Eceran 1 (Rp ${currentBarang.e1.toLocaleString('id-ID')})</option>
+                <option value="${currentBarang.g2}">Grosir 2 (Rp ${currentBarang.g2.toLocaleString('id-ID')})</option>
+                <option value="${currentBarang.g1}">Grosir 1 (Rp ${currentBarang.g1.toLocaleString('id-ID')})</option>
+            `;
+            
+            customHargaInput.value = hargaSelect.value;
+            hargaSelect.onchange = function() { customHargaInput.value = this.value; };
+            document.getElementById('qtyInput').focus();
+            document.getElementById('qtyInput').select();
+        }
+
+        // =======================================================
+        // TAMBAHKAN KE LIST (ENTER)
+        // =======================================================
         ['qtyInput', 'unitInput', 'hargaSelect', 'customHargaInput'].forEach(id => {
             document.getElementById(id).addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') { e.preventDefault(); prosesTambahKeList(); }
@@ -287,7 +375,11 @@
 
         function resetAreaInput() {
             currentBarang = null;
-            document.getElementById('barcodeInput').value = '';
+            let inp = document.getElementById('barcodeInput');
+            inp.value = '';
+            inp.placeholder = "Siap! Scan / ketik nama...";
+            document.getElementById('searchDropdown').classList.add('hidden');
+            
             document.getElementById('namaBarangPreview').innerText = '';
             document.getElementById('qtyInput').value = '1';
             document.getElementById('qtyInput').disabled = true;
@@ -301,7 +393,7 @@
             customHargaInput.value = '';
             customHargaInput.disabled = true;
             document.getElementById('btnTambah').disabled = true;
-            document.getElementById('barcodeInput').focus();
+            inp.focus();
         }
 
         function updateNomorUrut() {
@@ -322,6 +414,7 @@
 
         // ====================================================================
         // ENGINE PENCETAKAN: DUPLIKAT JIKA <= 25, BELAH/SAMBUNG JIKA > 25
+        // DITAMBAH WATERMARK DI SETIAP KOLOM
         // ====================================================================
         function cetakStruk() {
             let printData = [];
@@ -347,7 +440,8 @@
                 html = '<p style="text-align:center; padding-top:40px; font-size: 20px;">Struk kosong.</p>';
             }
 
-            // --- BAGIAN HEADER & TOTAL YANG BISA DIPAKAI BERULANG ---
+            let watermarkHTML = URL_WATERMARK ? `<img src="${URL_WATERMARK}" class="watermark-img" alt="Watermark">` : '';
+
             let headerHTML = `
                 <div class="mb-3">
                     <h2 class="font-bold italic">Toko Faster</h2>
@@ -365,34 +459,26 @@
                     </div>
                 </div>`;
 
-
             if (totalItems <= maxPerColumn && totalItems > 0) {
-                // ==========================================
-                // SKENARIO 1: <= 25 BARIS (RANGKAP / DOUBLE)
-                // ==========================================
                 let tableHTML = renderPrintTable(printData);
                 
-                // Susun 1 layout utuh
                 let fullReceipt = `
-                    <div style="display:flex; flex-direction:column; height:100%;">
+                    <div style="position: relative; display:flex; flex-direction:column; height:100%;">
+                        ${watermarkHTML}
                         ${headerHTML}
                         <div style="flex-grow:1;">${tableHTML}</div>
                         ${totalHTML}
                     </div>
                 `;
 
-                // Render 2 kali (kiri dan kanan)
                 html = `
                 <div class="print-page">
-                    <div style="width: 48%;">${fullReceipt}</div>
-                    <div class="col-kanan" style="width: 48%;">${fullReceipt}</div>
+                    <div style="width: 48%; position: relative;">${fullReceipt}</div>
+                    <div class="col-kanan" style="width: 48%; position: relative;">${fullReceipt}</div>
                 </div>`;
 
             } else if (totalItems > maxPerColumn) {
-                // ==========================================
-                // SKENARIO 2: > 25 BARIS (SAMBUNG / SPLIT)
-                // ==========================================
-                for (let i = 0; i < totalItems; i += 50) { // 50 items per halaman utuh
+                for (let i = 0; i < totalItems; i += 50) { 
                     let chunk = printData.slice(i, i + 50);
                     let col1 = chunk.slice(0, 25);
                     let col2 = chunk.slice(25, 50);
@@ -402,22 +488,22 @@
 
                     html += `<div class="print-page">`;
                     
-                    // -- KOLOM KIRI --
-                    html += `<div style="width: 48%; display:flex; flex-direction:column;">`;
-                    if (isFirstPage) html += headerHTML; // Header di kiri atas
+                    html += `<div style="position: relative; width: 48%; display:flex; flex-direction:column;">`;
+                    html += watermarkHTML;
+                    if (isFirstPage) html += headerHTML; 
                     html += `<div style="flex-grow:1;">${renderPrintTable(col1)}</div>`;
-                    if (isLastPage && col2.length === 0) html += totalHTML; // Kalau pas abis di kolom kiri
+                    if (isLastPage && col2.length === 0) html += totalHTML; 
                     html += `</div>`;
                     
-                    // -- KOLOM KANAN --
-                    html += `<div class="col-kanan" style="width: 48%; display:flex; flex-direction:column;">`;
+                    html += `<div class="col-kanan" style="position: relative; width: 48%; display:flex; flex-direction:column;">`;
                     if (col2.length > 0) {
+                        html += watermarkHTML;
                         html += `<div style="flex-grow:1;">${renderPrintTable(col2)}</div>`;
-                        if (isLastPage) html += totalHTML; // Kalau abisnya di kolom kanan
+                        if (isLastPage) html += totalHTML; 
                     }
                     html += `</div>`;
                     
-                    html += `</div>`; // Tutup Halaman
+                    html += `</div>`; 
                 }
             }
 
