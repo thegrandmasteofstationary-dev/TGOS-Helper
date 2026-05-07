@@ -19,11 +19,18 @@
             .print-page { width: 100%; height: 100%; page-break-after: always; page-break-inside: avoid; display: flex; gap: 4%; }
             .print-page:last-child { page-break-after: auto; }
             
+            /* Font Struk */
             table { border-collapse: collapse; width: 100%; font-size: 11px; }
-            th, td { padding: 4px 6px !important; line-height: 1.2 !important; border-bottom: 1px solid #ddd; }
-            th { border-bottom: 2px solid black; }
+            /* Penambahan garis (border) agar tidak salah lihat */
+            th, td { 
+                padding: 4px 6px !important; 
+                line-height: 1.2 !important; 
+                border: 1px solid black !important; /* Garis kotak penuh */
+            }
+            th { background-color: #f2f2f2 !important; }
             
-            h2 { margin-bottom: 4px !important; font-size: 18px !important; }
+            h2 { margin-bottom: 2px !important; font-size: 18px !important; }
+            .address-text { font-size: 10px; margin-bottom: 8px; font-style: italic; }
             
             .col-kanan { border-left: 1px dashed #999; padding-left: 4%; }
 
@@ -144,9 +151,11 @@
         let currentBarang = null; 
 
         // ==============================================
-        // URL GAMBAR WATERMARK
+        // KONFIGURASI TOKO (Silakan Ubah)
         // ==============================================
-        const URL_WATERMARK = "https://i.pinimg.com/736x/28/54/26/285426b2edfd59295099c3618c3bb4f1.jpg"; 
+        const NAMA_TOKO = "Toko Faster";
+        const ALAMAT_TOKO = "Jl. Nama Jalan No. 123, Kota, Provinsi"; 
+        const URL_WATERMARK = "https://via.placeholder.com/400x400?text=Logo+Toko+Faster"; 
         // ==============================================
 
         async function fetchDatabase() {
@@ -190,23 +199,17 @@
         }
         window.onload = fetchDatabase;
 
-        // =======================================================
-        // LOGIKA AUTOCOMPLETE SEARCH & SCANNER
-        // =======================================================
         const inputHibrida = document.getElementById('barcodeInput');
         const dropdownSearch = document.getElementById('searchDropdown');
 
         inputHibrida.addEventListener('input', function() {
             const keyword = this.value.toLowerCase().trim();
             dropdownSearch.innerHTML = '';
-            
             if (keyword.length < 2) {
                 dropdownSearch.classList.add('hidden');
                 return;
             }
-            
             const hasilSearch = listProdukUnik.filter(p => p.nama.toLowerCase().includes(keyword));
-            
             if (hasilSearch.length > 0) {
                 dropdownSearch.classList.remove('hidden');
                 hasilSearch.forEach(prod => {
@@ -233,7 +236,6 @@
                 dropdownSearch.classList.add('hidden');
                 let barcode = this.value.trim();
                 if (barcode === "") return;
-                
                 if (database[barcode]) {
                     aktifkanUIBarang(database[barcode]);
                 } else {
@@ -243,23 +245,16 @@
             }
         });
 
-        // =======================================================
-        // AKTIVASI UI BARANG & LOGIKA SORTING DROPDOWN HARGA
-        // =======================================================
         function aktifkanUIBarang(dataBarang) {
             currentBarang = dataBarang;
-            
             inputHibrida.value = currentBarang.nama;
             dropdownSearch.classList.add('hidden');
-
             document.getElementById('namaBarangPreview').innerText = "Terdeteksi: " + currentBarang.nama;
             document.getElementById('namaBarangPreview').classList.replace('text-red-600', 'text-green-600');
             document.getElementById('qtyInput').disabled = false;
             document.getElementById('unitInput').disabled = false;
-            
             let hargaSelect = document.getElementById('hargaSelect');
             let customHargaInput = document.getElementById('customHargaInput');
-            
             hargaSelect.disabled = false;
             hargaSelect.classList.remove('bg-gray-100');
             customHargaInput.disabled = false;
@@ -279,7 +274,6 @@
             } else {
                 hargaSelect.innerHTML = eceranHTML + grosirHTML;
             }
-            
             customHargaInput.value = hargaSelect.value;
             hargaSelect.onchange = function() { customHargaInput.value = this.value; };
             document.getElementById('qtyInput').focus();
@@ -298,11 +292,9 @@
             let qty = parseInt(document.getElementById('qtyInput').value) || 1;
             let unit = document.getElementById('unitInput').value;
             let hargaSatuan = parseInt(document.getElementById('customHargaInput').value) || 0;
-
             let tbody = document.getElementById('listBarang');
             let tr = document.createElement('tr');
             tr.className = "border-b border-gray-200 baris-barang hover:bg-gray-50";
-
             tr.innerHTML = `
                 <td class="py-2 align-top text-sm text-center font-semibold"><span class="nomor-urut"></span></td>
                 <td class="py-2 align-top text-sm">
@@ -328,17 +320,14 @@
                     <button class="text-red-500 hover:text-red-700 font-bold btn-hapus" title="Hapus Baris">✕</button>
                 </td>
             `;
-
             let inputs = tr.querySelectorAll('.row-qty, .row-unit, .row-harga, .row-nama');
             inputs.forEach(input => {
                 input.addEventListener('input', updateBaris);
                 input.addEventListener('change', updateBaris);
             });
-
             tr.querySelector('.btn-hapus').addEventListener('click', function() {
                 tr.remove(); hitungTotalSemua(); updateNomorUrut(); cekSemuaRedundansi(); 
             });
-
             function updateBaris() {
                 let rQty = parseInt(tr.querySelector('.row-qty').value) || 0;
                 let rHarga = parseInt(tr.querySelector('.row-harga').value) || 0;
@@ -346,7 +335,6 @@
                 tr.querySelector('.subtotal-teks').innerText = 'Rp ' + rSubtotal.toLocaleString('id-ID');
                 hitungTotalSemua(); cekSemuaRedundansi();
             }
-
             tbody.appendChild(tr);
             updateBaris(); updateNomorUrut(); cekSemuaRedundansi(); resetAreaInput();
         }
@@ -374,7 +362,6 @@
             inp.value = '';
             inp.placeholder = "Siap! Scan / ketik nama...";
             document.getElementById('searchDropdown').classList.add('hidden');
-            
             document.getElementById('namaBarangPreview').innerText = '';
             document.getElementById('qtyInput').value = '1';
             document.getElementById('qtyInput').disabled = true;
@@ -407,6 +394,9 @@
             document.getElementById('totalAkhir').innerText = grandTotal.toLocaleString('id-ID');
         }
 
+        // ====================================================================
+        // ENGINE PENCETAKAN: DUPLIKAT JIKA <= 25, BELAH/SAMBUNG JIKA > 25
+        // ====================================================================
         function cetakStruk() {
             let printData = [];
             document.querySelectorAll('.baris-barang').forEach((tr, index) => {
@@ -435,24 +425,29 @@
 
             let headerHTML = `
                 <div class="mb-3">
-                    <h2 class="font-bold italic">Toko Faster</h2>
-                    <table style="width: auto !important; font-size: 11px;">
-                        <tr><td class="font-bold !pr-2 !pb-0 !pl-0 !pt-0">Tanggal</td><td class="!p-0">: ${tanggal}</td></tr>
-                        <tr><td class="font-bold !pr-2 !pb-0 !pl-0 !pt-0">Tuan Toko</td><td class="!p-0">: ${tuanToko}</td></tr>
-                        <tr><td class="font-bold !pr-2 !pb-0 !pl-0 !pt-0">Catatan</td><td class="!p-0">: ${catatan}</td></tr>
+                    <h2 class="font-bold italic">${NAMA_TOKO}</h2>
+                    <p class="address-text">${ALAMAT_TOKO}</p>
+                    <table style="width: auto !important; font-size: 11px; border: none !important;">
+                        <tr style="border: none !important;"><td style="border: none !important;" class="font-bold !pr-2 !pb-0 !pl-0 !pt-0">Tanggal</td><td style="border: none !important;" class="!p-0">: ${tanggal}</td></tr>
+                        <tr style="border: none !important;"><td style="border: none !important;" class="font-bold !pr-2 !pb-0 !pl-0 !pt-0">Tuan Toko</td><td style="border: none !important;" class="!p-0">: ${tuanToko}</td></tr>
+                        <tr style="border: none !important;"><td style="border: none !important;" class="font-bold !pr-2 !pb-0 !pl-0 !pt-0">Catatan</td><td style="border: none !important;" class="!p-0">: ${catatan}</td></tr>
                     </table>
                 </div>`;
 
             let totalHTML = `
                 <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
-                    <div style="border-top: 2px solid black; padding-top: 4px; padding-left: 16px; text-align: right;">
-                        <h3 style="font-size: 14px; font-weight: bold; margin:0;">Total: Rp ${grandTotal}</h3>
+                    <div style="text-align: right;">
+                        <h3 style="font-size: 14px; font-weight: bold; margin:0; border-top: 2px solid black; padding-top: 4px;">Total: Rp ${grandTotal}</h3>
+                        <div style="margin-top: 20px; font-size: 11px;">
+                            <p>Hormat Kami,</p>
+                            <br><br>
+                            <p>( ............................ )</p>
+                        </div>
                     </div>
                 </div>`;
 
             if (totalItems <= maxPerColumn && totalItems > 0) {
                 let tableHTML = renderPrintTable(printData);
-                
                 let fullReceipt = `
                     <div style="position: relative; display:flex; flex-direction:column; height:100%;">
                         ${watermarkHTML}
@@ -461,31 +456,25 @@
                         ${totalHTML}
                     </div>
                 `;
-
                 html = `
                 <div class="print-page">
                     <div style="width: 48%; position: relative;">${fullReceipt}</div>
                     <div class="col-kanan" style="width: 48%; position: relative;">${fullReceipt}</div>
                 </div>`;
-
             } else if (totalItems > maxPerColumn) {
                 for (let i = 0; i < totalItems; i += 50) { 
                     let chunk = printData.slice(i, i + 50);
                     let col1 = chunk.slice(0, 25);
                     let col2 = chunk.slice(25, 50);
-
                     let isFirstPage = (i === 0);
                     let isLastPage = (i + 50 >= totalItems);
-
                     html += `<div class="print-page">`;
-                    
                     html += `<div style="position: relative; width: 48%; display:flex; flex-direction:column;">`;
                     html += watermarkHTML;
                     if (isFirstPage) html += headerHTML; 
                     html += `<div style="flex-grow:1;">${renderPrintTable(col1)}</div>`;
                     if (isLastPage && col2.length === 0) html += totalHTML; 
                     html += `</div>`;
-                    
                     html += `<div class="col-kanan" style="position: relative; width: 48%; display:flex; flex-direction:column;">`;
                     if (col2.length > 0) {
                         html += watermarkHTML;
@@ -493,11 +482,9 @@
                         if (isLastPage) html += totalHTML; 
                     }
                     html += `</div>`;
-                    
                     html += `</div>`; 
                 }
             }
-
             document.getElementById('printLayout').innerHTML = html;
             window.print();
         }
@@ -505,12 +492,12 @@
         function renderPrintTable(items) {
             if(items.length === 0) return '';
             let t = `
-            <table style="width: 100%; text-align: left;">
+            <table>
                 <thead>
                     <tr>
-                        <th style="width: 5%; font-weight: bold;">No</th>
-                        <th style="width: 18%; font-weight: bold;">Qty</th>
-                        <th style="width: 42%; font-weight: bold;">Nama Barang</th>
+                        <th style="width: 5%; font-weight: bold; text-align: center;">No</th>
+                        <th style="width: 18%; font-weight: bold; text-align: center;">Qty</th>
+                        <th style="width: 42%; font-weight: bold; text-align: center;">Nama Barang</th>
                         <th style="width: 15%; font-weight: bold; text-align: right;">Harga</th>
                         <th style="width: 20%; font-weight: bold; text-align: right;">Jumlah</th>
                     </tr>
@@ -519,11 +506,11 @@
             items.forEach(item => {
                 t += `
                 <tr>
-                    <td style="vertical-align: top;">${item.no}</td>
-                    <td style="vertical-align: top;">${item.qty} ${item.unit}</td>
-                    <td style="vertical-align: top; word-break: break-word; padding-right: 4px;">${item.nama}</td>
-                    <td style="vertical-align: top; text-align: right;">${item.harga.toLocaleString('id-ID')}</td>
-                    <td style="vertical-align: top; text-align: right;">${item.subtotal.toLocaleString('id-ID')}</td>
+                    <td style="text-align: center;">${item.no}</td>
+                    <td style="text-align: center;">${item.qty} ${item.unit}</td>
+                    <td style="word-break: break-word;">${item.nama}</td>
+                    <td style="text-align: right;">${item.harga.toLocaleString('id-ID')}</td>
+                    <td style="text-align: right;">${item.subtotal.toLocaleString('id-ID')}</td>
                 </tr>`;
             });
             t += `</tbody></table>`;
