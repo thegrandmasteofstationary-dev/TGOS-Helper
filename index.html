@@ -33,16 +33,24 @@
             
             .col-kanan { border-left: 1px dashed #999; padding-left: 4%; }
 
-            /* WATERMARK */
+            /* WATERMARK FIX - OPACITY DITEBALIN */
             .watermark-img {
                 position: absolute;
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
-                width: 70%; 
-                opacity: 0.15; 
-                z-index: -1;
+                width: 60%; 
+                opacity: 0.4; /* DITEBALIN DARI 0.15 JADI 0.4 BIAR GA SAMAR */
+                z-index: 1; 
                 pointer-events: none;
+            }
+            
+            .konten-kertas {
+                position: relative;
+                z-index: 2; 
+                display: flex;
+                flex-direction: column;
+                height: 100%;
             }
         }
     </style>
@@ -151,7 +159,9 @@
 
         const NAMA_TOKO = "Toko Faster";
         const ALAMAT_TOKO = "Jl. Tugu Pahlawan No.43, Bukit Cermin, Kec. Tanjungpinang Bar., Kota Tanjung Pinang, Kepulauan Riau"; 
-        const URL_WATERMARK = "https://raw.githubusercontent.com/thegrandmasteofstationary-dev/TGOS-Helper/refs/heads/main/logo.png";
+        
+        // Ganti "logo.jpg" dengan nama file asli yang kamu upload ke GitHub
+        const URL_WATERMARK = "logo.png"; 
 
         async function fetchDatabase() {
             const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQqFjmQEMLJl-UhiBkV6hDmVePKMGhWgUkwqPWiUOcv6YeBjX9-mw75au_WztJIkcbwr0D2hcDAGZrw/pub?gid=1746227063&single=true&output=csv';
@@ -390,7 +400,7 @@
         }
 
         // ====================================================================
-        // ENGINE PENCETAKAN: DUPLIKAT JIKA <= 25, BELAH/SAMBUNG JIKA > 25
+        // ENGINE PENCETAKAN
         // ====================================================================
         function cetakStruk() {
             let printData = [];
@@ -444,11 +454,13 @@
             if (totalItems <= maxPerColumn && totalItems > 0) {
                 let tableHTML = renderPrintTable(printData);
                 let fullReceipt = `
-                    <div style="position: relative; display:flex; flex-direction:column; height:100%;">
+                    <div style="position: relative; z-index: 0; display:flex; flex-direction:column; height:100%;">
                         ${watermarkHTML}
-                        ${headerHTML}
-                        <div style="flex-grow:1;">${tableHTML}</div>
-                        ${totalHTML}
+                        <div class="konten-kertas">
+                            ${headerHTML}
+                            <div style="flex-grow:1;">${tableHTML}</div>
+                            ${totalHTML}
+                        </div>
                     </div>
                 `;
                 html = `
@@ -463,20 +475,27 @@
                     let col2 = chunk.slice(25, 50);
                     let isFirstPage = (i === 0);
                     let isLastPage = (i + 50 >= totalItems);
+                    
                     html += `<div class="print-page">`;
-                    html += `<div style="position: relative; width: 48%; display:flex; flex-direction:column;">`;
+                    
+                    html += `<div style="position: relative; z-index: 0; width: 48%; display:flex; flex-direction:column;">`;
                     html += watermarkHTML;
+                    html += `<div class="konten-kertas">`;
                     if (isFirstPage) html += headerHTML; 
                     html += `<div style="flex-grow:1;">${renderPrintTable(col1)}</div>`;
                     if (isLastPage && col2.length === 0) html += totalHTML; 
-                    html += `</div>`;
-                    html += `<div class="col-kanan" style="position: relative; width: 48%; display:flex; flex-direction:column;">`;
+                    html += `</div></div>`;
+                    
+                    html += `<div class="col-kanan" style="position: relative; z-index: 0; width: 48%; display:flex; flex-direction:column;">`;
                     if (col2.length > 0) {
                         html += watermarkHTML;
+                        html += `<div class="konten-kertas">`;
                         html += `<div style="flex-grow:1;">${renderPrintTable(col2)}</div>`;
                         if (isLastPage) html += totalHTML; 
+                        html += `</div>`;
                     }
                     html += `</div>`;
+                    
                     html += `</div>`; 
                 }
             }
