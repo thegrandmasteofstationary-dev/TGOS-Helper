@@ -19,6 +19,7 @@
             .print-page { width: 100%; height: 100%; page-break-after: always; page-break-inside: avoid; display: flex; gap: 4%; }
             .print-page:last-child { page-break-after: auto; }
             
+            /* Font Struk */
             table { border-collapse: collapse; width: 100%; font-size: 11px; }
             th, td { 
                 padding: 4px 6px !important; 
@@ -33,35 +34,33 @@
             .col-kanan { border-left: 1px dashed #999; padding-left: 4%; }
 
             /* ========================================================
-               LOGIKA CAP STEMPEL RESMI (POSISI DIGESER KE KIRI)
+               LOGIKA CAP STEMPEL RESMI (GANTINYA WATERMARK)
                ======================================================== */
             .area-tanda-tangan {
-                position: relative;
+                position: relative; /* Induk untuk posisi cap */
                 margin-top: 15px;
                 font-size: 11px;
                 text-align: right;
-                display: block;
+                display: inline-block;
                 width: 100%;
-                min-height: 80px;
             }
 
             .cap-stempel {
                 position: absolute;
-                /* Geser ke kiri: angka ini ditambah jika ingin lebih ke kiri */
-                right: 45px; 
-                top: -10px;   
-                width: 85px;  /* Sedikit diperbesar biar mantap */
-                height: 85px;
-                opacity: 0.5; /* Tingkat ketebalan cap */
-                z-index: 1;    
+                right: -10px; /* Atur posisi horizontal stempel */
+                top: -5px;   /* Atur posisi vertikal menimpa "Hormat Kami" */
+                width: 70px;  /* Ukuran cap kecil seperti stempel asli */
+                height: 70px;
+                opacity: 0.65; /* Warna merah marun samar */
+                z-index: 1;    /* Di bawah layer tulisan tapi di atas kertas */
                 pointer-events: none;
-                transform: rotate(-15deg); 
+                transform: rotate(-15deg); /* Efek stempel agak miring dikit */
             }
 
+            /* Pembungkus teks tanda tangan agar di atas cap */
             .teks-tanda-tangan {
                 position: relative;
-                z-index: 2; 
-                padding-right: 10px;
+                z-index: 2; /* Di atas cap stempel */
             }
         }
     </style>
@@ -72,7 +71,7 @@
         <div class="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             
             <div class="lg:col-span-4 bg-white p-6 rounded-lg shadow-md sticky top-4 flex flex-col gap-4">
-                <h2 class="text-xl font-bold border-b pb-2">Kasir / POS Scanner</h2>
+                <h2 class="text-xl font-bold border-b pb-2">Kasir / POS Cap Resmi</h2>
                 
                 <div>
                     <label class="block text-sm font-semibold mb-1">1. Scan Barcode / Ketik Nama Barang</label>
@@ -209,6 +208,7 @@
                 inputScanner.focus();
             } catch (error) {
                 document.getElementById('namaBarangPreview').innerText = "Gagal memuat database!";
+                document.getElementById('namaBarangPreview').classList.replace('text-green-600', 'text-red-600');
             }
         }
         window.onload = fetchDatabase;
@@ -254,6 +254,7 @@
                     aktifkanUIBarang(database[barcode]);
                 } else {
                     document.getElementById('namaBarangPreview').innerText = "❌ Barcode tidak ditemukan!";
+                    document.getElementById('namaBarangPreview').classList.replace('text-green-600', 'text-red-600');
                 }
             }
         });
@@ -263,6 +264,7 @@
             inputHibrida.value = currentBarang.nama;
             dropdownSearch.classList.add('hidden');
             document.getElementById('namaBarangPreview').innerText = "Terdeteksi: " + currentBarang.nama;
+            document.getElementById('namaBarangPreview').classList.replace('text-red-600', 'text-green-600');
             document.getElementById('qtyInput').disabled = false;
             document.getElementById('unitInput').disabled = false;
             let hargaSelect = document.getElementById('hargaSelect');
@@ -406,6 +408,9 @@
             document.getElementById('totalAkhir').innerText = grandTotal.toLocaleString('id-ID');
         }
 
+        // ====================================================================
+        // ENGINE PENCETAKAN: DUPLIKAT JIKA <= 25, BELAH/SAMBUNG JIKA > 25
+        // ====================================================================
         function cetakStruk() {
             let printData = [];
             document.querySelectorAll('.baris-barang').forEach((tr, index) => {
@@ -430,7 +435,8 @@
                 html = '<p style="text-align:center; padding-top:40px; font-size: 20px;">Struk kosong.</p>';
             }
 
-            let capStempelHTML = `<img src="${URL_STEMPEL}" class="cap-stempel" alt="Cap Resmi">`;
+            // HTML Cap Stempel (posisi absolut di dalam area tanda tangan)
+            let capStempelHTML = URL_STEMPEL ? `<img src="${URL_STEMPEL}" class="cap-stempel" alt="Cap Resmi">` : '';
 
             let headerHTML = `
                 <div class="mb-3">
@@ -443,9 +449,10 @@
                     </table>
                 </div>`;
 
+            // HTML Total & Tanda Tangan dengan Cap Menimpa
             let totalHTML = `
                 <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
-                    <div style="text-align: right; width: 200px;">
+                    <div style="text-align: right;">
                         <h3 style="font-size: 14px; font-weight: bold; margin:0; border-top: 2px solid black; padding-top: 4px;">Total: Rp ${grandTotal}</h3>
                         
                         <div class="area-tanda-tangan">
@@ -461,6 +468,7 @@
 
             if (totalItems <= maxPerColumn && totalItems > 0) {
                 let tableHTML = renderPrintTable(printData);
+                // Konten kertas biasa (stempel ada di dalam totalHTML)
                 let fullReceipt = `
                     <div style="display:flex; flex-direction:column; height:100%;">
                         ${headerHTML}
@@ -482,6 +490,7 @@
                     let isLastPage = (i + 50 >= totalItems);
                     
                     html += `<div class="print-page">`;
+                    
                     html += `<div style="width: 48%; display:flex; flex-direction:column;">`;
                     if (isFirstPage) html += headerHTML; 
                     html += `<div style="flex-grow:1;">${renderPrintTable(col1)}</div>`;
@@ -494,18 +503,37 @@
                         if (isLastPage) html += totalHTML; 
                     }
                     html += `</div>`;
+                    
                     html += `</div>`; 
                 }
             }
             document.getElementById('printLayout').innerHTML = html;
-            setTimeout(() => { window.print(); }, 500);
+            window.print();
         }
 
         function renderPrintTable(items) {
             if(items.length === 0) return '';
-            let t = `<table><thead><tr><th style="width: 10%;">No</th><th style="width: 15%;">Qty</th><th style="width: 40%;">Nama Barang</th><th style="width: 15%;">Harga</th><th style="width: 20%;">Jumlah</th></tr></thead><tbody>`;
+            let t = `
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 5%; font-weight: bold; text-align: center;">No</th>
+                        <th style="width: 18%; font-weight: bold; text-align: center;">Qty</th>
+                        <th style="width: 42%; font-weight: bold; text-align: center;">Nama Barang</th>
+                        <th style="width: 15%; font-weight: bold; text-align: right;">Harga</th>
+                        <th style="width: 20%; font-weight: bold; text-align: right;">Jumlah</th>
+                    </tr>
+                </thead>
+                <tbody>`;
             items.forEach(item => {
-                t += `<tr><td style="text-align: center;">${item.no}</td><td style="text-align: center;">${item.qty} ${item.unit}</td><td>${item.nama}</td><td style="text-align: right;">${item.harga.toLocaleString('id-ID')}</td><td style="text-align: right;">${item.subtotal.toLocaleString('id-ID')}</td></tr>`;
+                t += `
+                <tr>
+                    <td style="text-align: center;">${item.no}</td>
+                    <td style="text-align: center;">${item.qty} ${item.unit}</td>
+                    <td style="word-break: break-word;">${item.nama}</td>
+                    <td style="text-align: right;">${item.harga.toLocaleString('id-ID')}</td>
+                    <td style="text-align: right;">${item.subtotal.toLocaleString('id-ID')}</td>
+                </tr>`;
             });
             t += `</tbody></table>`;
             return t;
