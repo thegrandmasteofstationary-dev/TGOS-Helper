@@ -6,9 +6,6 @@
     <title>Digital Receipt POS - Cap Resmi</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* ========================================================
-           PENGATURAN KHUSUS PRINTER
-           ======================================================== */
         @media print {
             @page { size: A4 landscape; margin: 10mm; } 
             body { background-color: white; color: black; -webkit-print-color-adjust: exact; }
@@ -30,7 +27,6 @@
             .address-text { font-size: 10px; margin-bottom: 8px; font-style: italic; }
             .col-kanan { border-left: 1px dashed #999; padding-left: 4%; }
 
-            /* CAP STEMPEL RESMI */
             .area-tanda-tangan {
                 position: relative;
                 margin-top: 15px;
@@ -38,16 +34,16 @@
                 text-align: right;
                 display: block;
                 width: 100%;
-                min-height: 90px; /* Kasih ruang buat stempel */
+                min-height: 90px; 
             }
 
             .cap-stempel {
                 position: absolute;
-                right: 40px; /* Sesuaikan biar pas di tengah tulisan */
+                right: 40px; 
                 top: -10px;   
                 width: 90px; 
                 height: auto;
-                opacity: 0.6; /* Makin gede angkanya makin jelas */
+                opacity: 0.6; 
                 z-index: 1;    
                 pointer-events: none;
                 transform: rotate(-15deg); 
@@ -170,7 +166,7 @@
 
         const NAMA_TOKO = "Toko Faster";
         const ALAMAT_TOKO = "Jl. Tugu Pahlawan No.43, Bukit Cermin, Kec. Tanjungpinang Bar., Kota Tanjung Pinang, Kepulauan Riau"; 
-        const URL_STEMPEL = "logo.png"; // Sesuai nama file di GitHub kamu
+        const URL_STEMPEL = "logo.png"; 
 
         async function fetchDatabase() {
             const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQqFjmQEMLJl-UhiBkV6hDmVePKMGhWgUkwqPWiUOcv6YeBjX9-mw75au_WztJIkcbwr0D2hcDAGZrw/pub?gid=1746227063&single=true&output=csv';
@@ -367,9 +363,6 @@
             document.getElementById('totalAkhir').innerText = grandTotal.toLocaleString('id-ID');
         }
 
-        // ====================================================================
-        // ENGINE PENCETAKAN: FIX LOGO + DELAY
-        // ====================================================================
         function cetakStruk() {
             let printData = [];
             document.querySelectorAll('.baris-barang').forEach((tr, index) => {
@@ -392,7 +385,6 @@
 
             if (totalItems === 0) { html = '<p style="text-align:center; padding-top:40px; font-size: 20px;">Struk kosong.</p>'; }
 
-            // Bikin tag IMG yang pasti narik file asli
             let capStempelHTML = `<img src="logo.png?v=${new Date().getTime()}" class="cap-stempel" alt="Cap Resmi">`;
 
             let headerHTML = `
@@ -416,6 +408,7 @@
                                 <p>Hormat Kami,</p>
                                 <br><br>
                                 <p>( ............................ )</p>
+                                <p>( Faster, Tanjungpinang. )</p>
                             </div>
                         </div>
                     </div>
@@ -448,7 +441,6 @@
             }
             document.getElementById('printLayout').innerHTML = html;
             
-            // Jeda 800ms biar browser punya waktu narik gambar logo.png dari GitHub
             setTimeout(() => { window.print(); }, 800);
         }
 
