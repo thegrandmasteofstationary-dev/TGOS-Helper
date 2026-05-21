@@ -37,7 +37,7 @@
             
             <div class="bg-blue-700/50 px-4 py-1.5 md:py-2 rounded-xl border border-blue-400 text-right shadow-inner flex flex-col justify-center">
                 <p class="text-[10px] md:text-xs font-semibold text-blue-200 uppercase tracking-widest -mb-1">TOTAL</p>
-                <h2 class="text-2xl md:text-4xl font-black font-harga tracking-tighter items-baseline flex gap-1">
+                <h2 class="text-2xl md:text-4xl font-black font-harga tracking-tighter items-baseline flex gap-1 whitespace-nowrap">
                     <span class="text-lg md:text-xl font-bold">Rp</span>
                     <span id="displayGrandTotal">0</span>
                 </h2>
@@ -45,11 +45,11 @@
         </header>
 
         <main class="flex-1 flex flex-col bg-white overflow-hidden">
-            <div class="bg-gray-100 p-2 md:p-3 border-b border-gray-200 grid grid-cols-12 gap-2 font-bold text-gray-600 uppercase text-[10px] md:text-xs tracking-wider sticky top-0 z-10">
+            <div class="bg-gray-100 p-2 md:p-3 border-b border-gray-200 grid grid-cols-12 gap-1 md:gap-2 font-bold text-gray-600 uppercase text-[10px] md:text-xs tracking-wider sticky top-0 z-10">
                 <div class="col-span-1 text-center">No</div>
-                <div class="col-span-6 md:col-span-7">Nama Barang</div>
-                <div class="col-span-2 md:col-span-1 text-center">Qty</div>
-                <div class="col-span-3 text-right pr-2">Subtotal</div>
+                <div class="col-span-5 md:col-span-6">Nama Barang</div>
+                <div class="col-span-2 text-center">Qty</div>
+                <div class="col-span-4 md:col-span-3 text-right pr-2">Subtotal</div>
             </div>
 
             <div id="keranjangPelanggan" class="flex-1 overflow-y-auto custom-scrollbar p-1.5 md:p-2">
@@ -64,7 +64,7 @@
 
     <script>
         const peer = new Peer(); 
-        const idKasir = 'kasir-tokofaster-01'; // Harus SAMA PERSIS dengan ID yang di file index.html
+        const idKasir = 'kasir-tokofaster-01'; 
         let conn = null;
 
         const banner = document.getElementById('connectionBanner');
@@ -80,33 +80,27 @@
             conn.on('open', () => {
                 banner.className = "bg-green-500 text-white text-center py-0.5 text-[10px] font-bold transition-all duration-300";
                 banner.innerText = "🟢 Real-Time Customer Facing Display Actived";
-                // Sembunyikan banner perlahan kalau udah nyambung biar layar lebih lega
                 setTimeout(() => { banner.style.transform = "translateY(-100%)"; banner.style.height = "0"; banner.style.padding = "0"; }, 2500);
             });
 
-            // Saat kasir ngirim data!
             conn.on('data', (data) => {
                 renderKeranjang(data.items);
                 grandTotalUI.innerText = data.grandTotal;
             });
 
-            // Kalau PC Kasir ditutup atau refresh
             conn.on('close', () => {
                 banner.style.transform = "translateY(0)"; banner.style.height = "auto"; banner.style.padding = "0.25rem 0";
                 banner.className = "bg-red-500 text-white text-center py-1 text-xs font-bold transition-all duration-300";
                 banner.innerText = "🔴 Komputer Kasir Terputus. Menunggu kasir membuka ulang...";
-                // Coba sambung otomatis tiap 5 detik
                 setTimeout(sambungkanKeKasir, 5000);
             });
         }
 
-        // Mulai nembak ke PC Kasir begitu sistem P2P siap
         peer.on('open', (id) => {
             console.log('Layar Pelanggan Siap dengan ID:', id);
             sambungkanKeKasir();
         });
 
-        // Error handling kalau P2P nyangkut
         peer.on('error', (err) => {
             console.error(err);
             if(err.type === 'peer-unavailable') {
@@ -116,7 +110,7 @@
             }
         });
 
-        // FUNGSI MENGGAMBAR KERANJANG DI LAYAR PELANGGAN (Optimized Mobile Landscape)
+        // FUNGSI MENGGAMBAR KERANJANG DI LAYAR PELANGGAN 
         function renderKeranjang(items) {
             if (items.length === 0) {
                 keranjangUI.innerHTML = `
@@ -129,25 +123,25 @@
             }
 
             let html = '';
-            // Barang terbaru muncul paling atas agar pelanggan langsung lihat barang yang barusan di-scan
             items.slice().reverse().forEach((item, revIndex) => {
-                let actualNo = items.length - revIndex; // Nomor urut asli
-                
-                // Zebra striping untuk kemudahan baca
+                let actualNo = items.length - revIndex; 
                 let bgRow = actualNo % 2 === 0 ? 'bg-gray-50' : 'bg-white';
                 
                 html += `
-                <div class="grid grid-cols-12 gap-2 items-center p-2.5 border-b border-gray-100 ${bgRow} rounded-lg mb-1">
+                <div class="grid grid-cols-12 gap-1 md:gap-2 items-center p-2 border-b border-gray-100 ${bgRow} rounded-lg mb-1">
                     <div class="col-span-1 text-center font-bold text-gray-400 text-xs md:text-sm">${actualNo}</div>
-                    <div class="col-span-6 md:col-span-7">
-                        <p class="font-bold text-gray-800 text-sm md:text-lg line-clamp-1 leading-tight">${item.nama}</p>
-                        <p class="text-[10px] md:text-xs text-gray-500 mt-0.5">@ Rp ${item.harga.toLocaleString('id-ID')}</p>
+                    
+                    <div class="col-span-5 md:col-span-6">
+                        <p class="font-bold text-gray-800 text-xs md:text-lg line-clamp-2 md:line-clamp-1 leading-tight">${item.nama}</p>
+                        <p class="text-[9px] md:text-xs text-gray-500 mt-0.5 whitespace-nowrap">@ Rp ${item.harga.toLocaleString('id-ID')}</p>
                     </div>
-                    <div class="col-span-2 md:col-span-1 text-center">
-                        <span class="bg-blue-100 text-blue-800 text-sm md:text-base font-bold px-2.5 py-0.5 rounded-lg">${item.qty} ${item.unit}</span>
+                    
+                    <div class="col-span-2 text-center">
+                        <span class="inline-block bg-blue-100 text-blue-800 text-[10px] md:text-base font-bold px-1.5 md:px-2.5 py-0.5 rounded md:rounded-lg whitespace-nowrap">${item.qty} ${item.unit}</span>
                     </div>
-                    <div class="col-span-3 text-right pr-2">
-                        <p class="text-lg md:text-2xl font-black font-harga text-gray-800 leading-none">Rp ${item.subtotal.toLocaleString('id-ID')}</p>
+                    
+                    <div class="col-span-4 md:col-span-3 text-right pr-1 md:pr-2">
+                        <p class="text-sm md:text-2xl font-black font-harga text-gray-800 leading-none whitespace-nowrap">Rp ${item.subtotal.toLocaleString('id-ID')}</p>
                     </div>
                 </div>`;
             });
