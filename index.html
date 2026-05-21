@@ -21,7 +21,6 @@
         .warna-teks-utama { color: #647a46; }
         .warna-aksen { background-color: #e8ecdc; } 
 
-        /* Input styling */
         .input-custom {
             border: 2px solid #cbd5e1;
             border-radius: 8px;
@@ -57,6 +56,18 @@
     </style>
 </head>
 <body class="bg-gingham min-h-screen text-gray-800 font-sans flex flex-col relative pb-20">
+
+    <nav class="warna-utama text-white py-3 px-8 flex justify-between items-center shadow-lg screen-area z-20 relative">
+        <div class="flex items-center gap-4">
+            <img src="logo.png" alt="Logo" class="w-12 h-12 bg-white rounded-full p-1" onerror="this.style.display='none'">
+        </div>
+        <div class="flex gap-8 font-bold text-lg">
+            <a href="#" class="hover:text-green-200 transition-colors">Home</a>
+            <a href="#" class="text-white border-b-2 border-white pb-1">Scanner</a>
+            <a href="#" class="hover:text-green-200 transition-colors">Inspect</a>
+        </div>
+    </nav>
+
     <div id="statusTablet" class="screen-area text-center py-1 text-xs font-bold bg-red-500 text-white shadow-md z-10 transition-colors">
         🔴 Tablet Pelanggan Offline
     </div>
@@ -87,13 +98,6 @@
                             <option value="pcs">Pcs</option>
                             <option value="lusin">Lusin</option>
                             <option value="pak">Pak</option>
-                            <option value="kotak">Kotak</option>
-                            <option value="slop/roll">Slop/roll</option>
-                            <option value="dus">Dus</option>
-                            <option value="bungkus">Bungkus</option>
-                            <option value="kodi">Kode</option>
-                            <option value="rim">Rim</option>
-                            <option value="gross">Gross</option>
                         </select>
                     </div>
                 </div>
@@ -147,11 +151,11 @@
                             </tr>
                         </thead>
                         <tbody id="listBarang">
-                            </tbody>
+                        </tbody>
                     </table>
                     
                     <div class="border-t-2 border-gray-400 mt-auto pt-6 flex flex-col items-end">
-                        <h3 class="text-3xl font-extrabold mb-1">Total: Rp <span id="totalAkhir">0</span></h3>
+                        <h3 class="text-xl md:text-3xl font-extrabold mb-1">Total: Rp <span id="totalAkhir">0</span></h3>
                     </div>
                 </div>
 
@@ -192,6 +196,14 @@
         let koneksiTablet = null;
 
         peer.on('connection', (conn) => {
+            if (koneksiTablet && koneksiTablet.open) {
+                setTimeout(() => {
+                    conn.send({ error: 'ALREADY_CONNECTED' });
+                    setTimeout(() => conn.close(), 500);
+                }, 500);
+                return;
+            }
+
             koneksiTablet = conn;
             let statusBadge = document.getElementById('statusTablet');
             statusBadge.innerText = "🟢 Tablet Pelanggan Online";
@@ -207,7 +219,7 @@
         });
 
         function broadcastKeTablet() {
-            if (!koneksiTablet) return; 
+            if (!koneksiTablet || !koneksiTablet.open) return; 
             
             let dataKeranjang = [];
             document.querySelectorAll('.baris-barang').forEach((tr, index) => {
@@ -222,10 +234,13 @@
         }
 
         // ====================================================================
-        // AMBIL DATABASE SPREADSHEET
+        // AMBIL DATABASE SPREADSHEET (MAPPING KOLOM BARU)
         // ====================================================================
         async function fetchDatabase() {
+            // URL otomatis dibentuk dari ID Spreadsheet di screenshot.
+            // PENTING: File Sheets harus sudah di "Publish to Web" sebagai CSV agar link ini aktif!
             const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQqFjmQEMLJl-UhiBkV6hDmVePKMGhWgUkwqPWiUOcv6YeBjX9-mw75au_WztJIkcbwr0D2hcDAGZrw/pub?gid=0&single=true&output=csv';
+            
             try {
                 const response = await fetch(url);
                 if (!response.ok) throw new Error("Gagal mengambil data");
@@ -233,26 +248,37 @@
                 const rows = csvText.split('\n');
                 
                 for (let i = 1; i < rows.length; i++) {
+                    // Split CSV dengan aman (menghiraukan koma di dalam tanda kutip)
                     const cols = rows[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                    if (cols.length >= 8) { 
-                        let nama = cols[1].replace(/['"]+/g, '').trim();
-                        let kodeJamak = cols[2].replace(/['"]+/g, '').trim();
-                        let kodeTunggal = cols[3].replace(/['"]+/g, '').trim();
-                        let hargaG1 = parseInt(cols[4].replace(/['"\.]+/g, '').trim()) || 0;
-                        let hargaG2 = parseInt(cols[5].replace(/['"\.]+/g, '').trim()) || 0;
-                        let hargaE1 = parseInt(cols[6].replace(/['"\.]+/g, '').trim()) || 0;
-                        let hargaE2 = parseInt(cols[7].replace(/['"\.]+/g, '').trim()) || 0;
+                    
+                    // Cek minimal ada 14 kolom agar tidak error baca kolom harga paling kanan
+                    if (cols.length >= 14) { 
+                        // MAPPING BARU SESUAI GAMBAR
+                        let nama = cols[2].replace(/['"]+/g, '').trim(); // Kolom C
+                        let kodeJamak = cols[3].replace(/['"]+/g, '').trim(); // Kolom D
+                        let kodeTunggal = cols[4].replace(/['"]+/g, '').trim(); // Kolom E
+                        
+                        // Harga melompat melewati kolom deskripsi satuan
+                        let hargaG1 = parseInt(cols[6].replace(/['"\.]+/g, '').trim()) || 0; // Kolom G
+                        let hargaG2 = parseInt(cols[9].replace(/['"\.]+/g, '').trim()) || 0; // Kolom J
+                        let hargaE1 = parseInt(cols[11].replace(/['"\.]+/g, '').trim()) || 0; // Kolom L
+                        let hargaE2 = parseInt(cols[13].replace(/['"\.]+/g, '').trim()) || 0; // Kolom N
+                        
                         let baseData = { nama, g1: hargaG1, g2: hargaG2, e1: hargaE1, e2: hargaE2 };
                         
                         if (kodeJamak !== "") database[kodeJamak] = { ...baseData, tipeBarcode: 'jamak' };
                         if (kodeTunggal !== "") database[kodeTunggal] = { ...baseData, tipeBarcode: 'tunggal' };
-                        if (!listProdukUnik.some(p => p.nama === nama)) listProdukUnik.push({ ...baseData, tipeBarcode: 'tunggal' });
+                        
+                        // Hindari masukin baris kosong
+                        if (nama !== "" && !listProdukUnik.some(p => p.nama === nama)) {
+                            listProdukUnik.push({ ...baseData, tipeBarcode: 'tunggal' });
+                        }
                     }
                 }
                 let inputScanner = document.getElementById('barcodeInput');
                 inputScanner.disabled = false; inputScanner.placeholder = "Siap! Ketik / Scan..."; inputScanner.focus();
             } catch (error) {
-                document.getElementById('namaBarangPreview').innerText = "Gagal memuat database!";
+                document.getElementById('namaBarangPreview').innerText = "Gagal memuat database! Pastikan Sheet sudah Publish to Web (CSV).";
             }
         }
         window.onload = fetchDatabase;
@@ -295,7 +321,6 @@
             currentBarang = dataBarang;
             inputHibrida.value = currentBarang.nama; dropdownSearch.classList.add('hidden');
             document.getElementById('namaBarangPreview').innerText = "Terdeteksi: " + currentBarang.nama;
-            document.getElementById('namaBarangPreview').classList.replace('text-red-600', 'text-green-600');
             document.getElementById('qtyInput').disabled = false; document.getElementById('unitInput').disabled = false;
             let hargaSelect = document.getElementById('hargaSelect'); let customHargaInput = document.getElementById('customHargaInput');
             hargaSelect.disabled = false; hargaSelect.classList.remove('bg-gray-50'); hargaSelect.classList.add('bg-white');
@@ -327,7 +352,6 @@
             let tbody = document.getElementById('listBarang');
             let tr = document.createElement('tr');
             
-            // Penyesuaian jarak & padding agar tidak berdesakan
             tr.className = "border-b border-gray-300 baris-barang hover:bg-[#dbe4c6]/40 transition-colors";
             tr.innerHTML = `
                 <td class="py-3 text-center font-bold text-gray-700 align-middle"><span class="nomor-urut"></span></td>
@@ -335,16 +359,7 @@
                     <div class="flex gap-2">
                         <input type="number" class="w-16 bg-white border border-gray-300 rounded-md p-2 text-sm row-qty focus:outline-none focus:border-[#647a46] shadow-sm text-center font-medium" value="${qty}" min="1">
                         <select class="bg-white border border-gray-300 rounded-md p-2 pr-6 text-sm row-unit focus:outline-none focus:border-[#647a46] shadow-sm">
-                            <option value="pcs" ${unit==='pcs'?'selected':''}>Pcs</option>
-                            <option value="lusin" ${unit==='lusin'?'selected':''}>Lusin</option>
-                            <option value="pak" ${unit==='pak'?'selected':''}>Pak</option>
-                            <option value="pak" ${unit==='kotak'?'selected':''}>Kotak</option>
-                            <option value="pak" ${unit==='slip/roll'?'selected':''}>Slop/roll</option>
-                            <option value="pak" ${unit==='dus'?'selected':''}>Dus</option>
-                            <option value="pak" ${unit==='bungkus'?'selected':''}>Bungkus</option>
-                            <option value="pak" ${unit==='kodi'?'selected':''}>Kodi</option>
-                            <option value="pak" ${unit==='rim'?'selected':''}>Rim</option>
-                            <option value="pak" ${unit==='gross'?'selected':''}>Gross</option>
+                            <option value="pcs" ${unit==='pcs'?'selected':''}>Pcs</option><option value="lusin" ${unit==='lusin'?'selected':''}>Lsn</option><option value="pak" ${unit==='pak'?'selected':''}>Pak</option>
                         </select>
                     </div>
                 </td>
@@ -418,9 +433,6 @@
             broadcastKeTablet();
         }
 
-        // ====================================================================
-        // ENGINE PENCETAKAN
-        // ====================================================================
         function cetakStruk() {
             let printData = [];
             document.querySelectorAll('.baris-barang').forEach((tr, index) => {
