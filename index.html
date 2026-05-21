@@ -87,6 +87,12 @@
                             <option value="pcs">Pcs</option>
                             <option value="lusin">Lusin</option>
                             <option value="pak">Pak</option>
+                            <option value="kotak">Kotak</option>
+                            <option value="slop/roll">Slop/roll</option>
+                            <option value="dus">Dus</option>
+                            <option value="bungkus">Bungkus</option>
+                            <option value="kodi">Kode</option>
+                            <option value="rim">Rim</option>
                         </select>
                     </div>
                 </div>
@@ -328,7 +334,15 @@
                     <div class="flex gap-2">
                         <input type="number" class="w-16 bg-white border border-gray-300 rounded-md p-2 text-sm row-qty focus:outline-none focus:border-[#647a46] shadow-sm text-center font-medium" value="${qty}" min="1">
                         <select class="bg-white border border-gray-300 rounded-md p-2 pr-6 text-sm row-unit focus:outline-none focus:border-[#647a46] shadow-sm">
-                            <option value="pcs" ${unit==='pcs'?'selected':''}>Pcs</option><option value="lusin" ${unit==='lusin'?'selected':''}>Lsn</option><option value="pak" ${unit==='pak'?'selected':''}>Pak</option>
+                            <option value="pcs" ${unit==='pcs'?'selected':''}>Pcs</option>
+                            <option value="lusin" ${unit==='lusin'?'selected':''}>Lusin</option>
+                            <option value="pak" ${unit==='pak'?'selected':''}>Pak</option>
+                            <option value="pak" ${unit==='kotak'?'selected':''}>Kotak</option>
+                            <option value="pak" ${unit==='slip/roll'?'selected':''}>Slop/roll</option>
+                            <option value="pak" ${unit==='dus'?'selected':''}>Dus</option>
+                            <option value="pak" ${unit==='bungkus'?'selected':''}>Bungkus</option>
+                            <option value="pak" ${unit==='kodi'?'selected':''}>Kodi</option>
+                            <option value="pak" ${unit==='rim'?'selected':''}>Rim</option>
                         </select>
                     </div>
                 </td>
