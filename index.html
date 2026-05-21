@@ -11,15 +11,15 @@
            TEMA WARNA & BACKGROUND KOTAK-KOTAK (GINGHAM)
            ======================================================== */
         .bg-gingham {
-            background-color: #dbe4c6; /* Hijau muda dasar */
+            background-color: #dbe4c6; 
             background-image: 
                 repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(255, 255, 255, 0.4) 40px, rgba(255, 255, 255, 0.4) 80px),
                 repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(255, 255, 255, 0.4) 40px, rgba(255, 255, 255, 0.4) 80px);
         }
 
-        .warna-utama { background-color: #647a46; } /* Hijau olive tua */
+        .warna-utama { background-color: #647a46; } 
         .warna-teks-utama { color: #647a46; }
-        .warna-aksen { background-color: #e8ecdc; } /* Krem/hijau pastel untuk tabel */
+        .warna-aksen { background-color: #e8ecdc; } 
 
         /* Input styling */
         .input-custom {
@@ -35,7 +35,7 @@
         }
 
         /* ========================================================
-           PENGATURAN KHUSUS PRINTER (TETAP SAMA)
+           PENGATURAN KHUSUS PRINTER
            ======================================================== */
         @media print {
             @page { size: A4 landscape; margin: 10mm; } 
@@ -56,7 +56,19 @@
         }
     </style>
 </head>
-<body class="bg-gingham min-h-screen text-gray-800 font-sans flex flex-col relative">
+<body class="bg-gingham min-h-screen text-gray-800 font-sans flex flex-col relative pb-20">
+
+    <nav class="warna-utama text-white py-3 px-8 flex justify-between items-center shadow-lg screen-area z-20 relative">
+        <div class="flex items-center gap-4">
+            <img src="logo.png" alt="Logo" class="w-12 h-12 bg-white rounded-full p-1" onerror="this.style.display='none'">
+        </div>
+        <div class="flex gap-8 font-bold text-lg">
+            <a href="#" class="hover:text-green-200 transition-colors">Home</a>
+            <a href="#" class="text-white border-b-2 border-white pb-1">Scanner</a>
+            <a href="#" class="hover:text-green-200 transition-colors">Inspect</a>
+        </div>
+    </nav>
+
     <div id="statusTablet" class="screen-area text-center py-1 text-xs font-bold bg-red-500 text-white shadow-md z-10 transition-colors">
         🔴 Tablet Pelanggan Offline
     </div>
@@ -64,7 +76,7 @@
     <div class="screen-area p-6 flex-1 flex justify-center items-start">
         <div class="max-w-[1400px] w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
             
-            <div class="lg:col-span-4 bg-white rounded-[32px] p-8 shadow-xl flex flex-col gap-5 border border-gray-100">
+            <div class="lg:col-span-4 bg-white rounded-[32px] p-8 shadow-xl flex flex-col gap-5 border border-gray-100 h-fit sticky top-6">
                 <h2 class="text-3xl font-extrabold mb-2 border-b-2 border-gray-100 pb-4">Kasir (POS Scanner)</h2>
                 
                 <div>
@@ -79,11 +91,11 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-semibold mb-2 text-gray-700">QTY.</label>
-                        <input type="number" id="qtyInput" class="w-full input-custom text-lg" value="1" min="1" disabled>
+                        <input type="number" id="qtyInput" class="w-full input-custom text-lg text-center" value="1" min="1" disabled>
                     </div>
                     <div>
                         <label class="block text-sm font-semibold mb-2 text-gray-700">Satuan</label>
-                        <select id="unitInput" class="w-full input-custom text-lg appearance-none bg-white" disabled>
+                        <select id="unitInput" class="w-full input-custom text-lg appearance-none bg-white pr-8" disabled>
                             <option value="pcs">Pcs</option>
                             <option value="lusin">Lusin</option>
                             <option value="pak">Pak</option>
@@ -94,7 +106,7 @@
                 <div>
                     <label class="block text-sm font-semibold mb-2 text-gray-700">Harga Jual</label>
                     <div class="flex flex-col gap-3">
-                        <select id="hargaSelect" class="w-full input-custom text-lg appearance-none bg-gray-50" disabled>
+                        <select id="hargaSelect" class="w-full input-custom text-lg appearance-none bg-gray-50 pr-8" disabled>
                             <option value="">Pilih harga otomatis...</option>
                         </select>
                         <input type="number" id="customHargaInput" class="w-full input-custom text-lg font-bold text-gray-800" placeholder="Harga manual..." disabled>
@@ -115,11 +127,11 @@
                     </div>
                     <div class="flex items-center gap-4">
                         <span class="w-32">Tuan Toko:</span> 
-                        <input type="text" id="inputTuanToko" class="border-b-2 border-gray-300 focus:border-[#647a46] outline-none flex-1 py-1 font-normal" placeholder="Nama Pelanggan...">
+                        <input type="text" id="inputTuanToko" class="border-b-2 border-gray-300 focus:border-[#647a46] outline-none flex-1 py-1 font-normal bg-transparent" placeholder="Nama Pelanggan...">
                     </div>
                     <div class="flex items-center gap-4">
                         <span class="w-32">Keterangan:</span> 
-                        <input type="text" id="inputCatatan" class="border-b-2 border-gray-300 focus:border-[#647a46] outline-none flex-1 py-1 font-normal" placeholder="Catatan tambahan...">
+                        <input type="text" id="inputCatatan" class="border-b-2 border-gray-300 focus:border-[#647a46] outline-none flex-1 py-1 font-normal bg-transparent" placeholder="Catatan tambahan...">
                     </div>
                 </div>
 
@@ -127,13 +139,13 @@
                     ⚠️ Terdapat Redundansi Baris: <span id="teksRedundansi"></span>
                 </div>
 
-                <div class="warna-aksen rounded-2xl p-6 flex-1 flex flex-col shadow-inner">
+                <div class="warna-aksen rounded-2xl p-6 flex-1 flex flex-col shadow-inner overflow-hidden">
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="border-b-2 border-gray-400 text-sm uppercase tracking-wide text-gray-700">
                                 <th class="pb-3 w-[5%] font-bold text-center">No.</th>
-                                <th class="pb-3 w-[15%] font-bold pl-2">Banyaknya</th>
-                                <th class="pb-3 w-[35%] font-bold pl-2">Nama Barang</th>
+                                <th class="pb-3 w-[20%] font-bold pl-2">Banyaknya</th>
+                                <th class="pb-3 w-[30%] font-bold pl-2">Nama Barang</th>
                                 <th class="pb-3 w-[20%] font-bold text-right pr-2">Harga</th>
                                 <th class="pb-3 w-[15%] font-bold text-right pr-2">Jumlah</th>
                                 <th class="pb-3 w-[10%] font-bold text-center">Hapus</th>
@@ -143,22 +155,22 @@
                             </tbody>
                     </table>
                     
-                    <div class="border-t-2 border-gray-400 mt-auto pt-4 flex flex-col items-end">
-                        <h3 class="text-2xl font-extrabold mb-1">Total: Rp <span id="totalAkhir">0</span></h3>
+                    <div class="border-t-2 border-gray-400 mt-auto pt-6 flex flex-col items-end">
+                        <h3 class="text-3xl font-extrabold mb-1">Total: Rp <span id="totalAkhir">0</span></h3>
                     </div>
                 </div>
 
-                <div class="mt-6 flex justify-end">
-                    <button onclick="cetakStruk()" class="warna-utama text-white px-10 py-3 rounded-xl font-bold text-xl hover:opacity-90 shadow-md transition-all">
-                        Cetak
+                <div class="mt-6 flex justify-end pb-4">
+                    <button onclick="cetakStruk()" class="warna-utama text-white px-12 py-4 rounded-xl font-bold text-xl hover:opacity-90 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
+                        Cetak Struk
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="screen-area fixed bottom-6 right-8 z-50">
-        <div class="warna-utama text-white px-6 py-2 rounded-full font-bold shadow-lg text-sm tracking-wider">
+    <div class="screen-area fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none">
+        <div class="warna-utama text-white px-6 py-2 rounded-full font-bold shadow-lg text-sm tracking-wider opacity-80 backdrop-blur-sm border border-white/20">
             TGOS HELPER © ALL RIGHTS RESERVED 2026
         </div>
     </div>
@@ -319,30 +331,30 @@
             let hargaSatuan = parseInt(document.getElementById('customHargaInput').value) || 0;
             let tbody = document.getElementById('listBarang');
             let tr = document.createElement('tr');
-            tr.className = "border-b border-gray-300 baris-barang hover:bg-[#dbe4c6]/40 transition-colors";
             
-            // Layout Baris yang Disesuaikan dengan mockup
+            // Penyesuaian jarak & padding agar tidak berdesakan
+            tr.className = "border-b border-gray-300 baris-barang hover:bg-[#dbe4c6]/40 transition-colors";
             tr.innerHTML = `
                 <td class="py-3 text-center font-bold text-gray-700 align-middle"><span class="nomor-urut"></span></td>
                 <td class="py-3 px-2 align-middle">
                     <div class="flex gap-2">
-                        <input type="number" class="w-16 bg-white border border-gray-300 rounded-md p-1.5 text-sm row-qty focus:outline-none focus:border-[#647a46] shadow-sm text-center font-medium" value="${qty}" min="1">
-                        <select class="bg-white border border-gray-300 rounded-md p-1.5 text-sm row-unit focus:outline-none focus:border-[#647a46] shadow-sm">
+                        <input type="number" class="w-16 bg-white border border-gray-300 rounded-md p-2 text-sm row-qty focus:outline-none focus:border-[#647a46] shadow-sm text-center font-medium" value="${qty}" min="1">
+                        <select class="bg-white border border-gray-300 rounded-md p-2 pr-6 text-sm row-unit focus:outline-none focus:border-[#647a46] shadow-sm">
                             <option value="pcs" ${unit==='pcs'?'selected':''}>Pcs</option><option value="lusin" ${unit==='lusin'?'selected':''}>Lsn</option><option value="pak" ${unit==='pak'?'selected':''}>Pak</option>
                         </select>
                     </div>
                 </td>
                 <td class="py-3 px-2 align-middle">
-                    <textarea class="w-full bg-white border border-gray-300 rounded-md p-1.5 text-sm focus:outline-none focus:border-[#647a46] shadow-sm row-nama resize-none h-10 font-medium">${currentBarang.nama}</textarea>
+                    <textarea class="w-full bg-white border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:border-[#647a46] shadow-sm row-nama resize-none h-11 font-medium leading-tight">${currentBarang.nama}</textarea>
                 </td>
                 <td class="py-3 px-2 align-middle">
-                    <input type="number" class="w-full bg-white border border-gray-300 rounded-md p-1.5 text-sm font-semibold row-harga focus:outline-none focus:border-[#647a46] shadow-sm text-right" value="${hargaSatuan}">
+                    <input type="number" class="w-full bg-white border border-gray-300 rounded-md p-2 text-sm font-semibold row-harga focus:outline-none focus:border-[#647a46] shadow-sm text-right" value="${hargaSatuan}">
                 </td>
                 <td class="py-3 px-2 text-right align-middle">
-                    <span class="subtotal-teks font-bold text-gray-800 bg-white border border-gray-300 rounded-md py-1.5 px-3 shadow-sm block">Rp 0</span>
+                    <span class="subtotal-teks font-bold text-gray-800 bg-white border border-gray-300 rounded-md py-2 px-3 shadow-sm block whitespace-nowrap">Rp 0</span>
                 </td>
                 <td class="py-3 text-center align-middle">
-                    <button class="text-gray-400 hover:text-red-600 font-extrabold text-lg btn-hapus transition-colors" title="Hapus Baris">✕</button>
+                    <button class="text-gray-400 hover:text-red-600 font-extrabold text-xl btn-hapus transition-colors" title="Hapus Baris">✕</button>
                 </td>
             `;
             
@@ -403,7 +415,7 @@
         }
 
         // ====================================================================
-        // ENGINE PENCETAKAN (DENGAN PROMISE IMAGE LOADER SAKTI)
+        // ENGINE PENCETAKAN
         // ====================================================================
         function cetakStruk() {
             let printData = [];
